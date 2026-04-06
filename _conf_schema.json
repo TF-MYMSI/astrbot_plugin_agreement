@@ -1,7 +1,7 @@
 {
   "admins": {
     "type": "list",
-    "description": "拥有管理权限的QQ号列表",
+    "description": "拥有管理权限的QQ号列表（示例：[\"123456789\"]）",
     "items": { "type": "string" },
     "default": []
   },
@@ -32,8 +32,8 @@
   },
   "doc_contact": {
     "type": "string",
-    "description": "联系方式",
-    "default": "QQ群 752775661"
+    "description": "联系方式（示例：QQ群 000000000）",
+    "default": "QQ群 000000000"
   },
   "trigger_keywords": {
     "type": "list",
@@ -50,21 +50,6 @@
     "type": "bool",
     "description": "是否发送文字版文档",
     "default": true
-  },
-  "delivery_image": {
-    "type": "bool",
-    "description": "是否发送图片版文档",
-    "default": false
-  },
-  "image_url": {
-    "type": "string",
-    "description": "协议图片的网络地址（优先使用）",
-    "default": ""
-  },
-  "image_path": {
-    "type": "string",
-    "description": "协议图片的本地路径",
-    "default": ""
   },
   "reply_agree": {
     "type": "text",
