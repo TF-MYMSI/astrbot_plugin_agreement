@@ -112,10 +112,10 @@ class AgreementPlugin(Star):
         # 管理员不受拒绝状态限制
         if self._is_admin(event.get_sender_id()):
             return False
-    
-    session = self._get_session_key(event)
-    status = await self.get_kv_data(session, None)
-    return status == self.STATE_REFUSED
+        
+        session = self._get_session_key(event)
+        status = await self.get_kv_data(session, None)
+        return status == self.STATE_REFUSED
 
     # ==================== 统计方法 ====================
 
@@ -143,18 +143,10 @@ class AgreementPlugin(Star):
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # 【核心】先检查拒绝状态，如果是拒绝状态，直接静默返回，不处理任何消息
+        # 【核心】检查拒绝状态（管理员不受限）
         if await self._is_rejected(event):
             event.stop_event()
             return
-        
-        # 命令优先处理，不检查协议状态
-        try:
-            if event.is_command():
-                return
-        except AttributeError:
-            if msg.startswith("/") or msg.startswith("#"):
-                return
         
         if is_group:
             # ========== 群聊分支 ==========
@@ -287,7 +279,6 @@ class AgreementPlugin(Star):
                 event.stop_event()
 
     # ==================== 命令 ====================
-    # 注意：所有命令都需要检查拒绝状态，拒绝状态下不执行任何命令
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
@@ -432,8 +423,6 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset_user")
     async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
         """管理员：重置指定用户的协议状态"""
-        # 管理员命令也不响应拒绝状态的用户，但管理员自己可以执行
-        # 如果管理员自己处于拒绝状态，那也不执行
         if await self._is_rejected(event):
             event.stop_event()
             return
@@ -493,7 +482,8 @@ class AgreementPlugin(Star):
 
 💡 提示：
 回复「同意」接受文档，回复「不同意」拒绝
-如果被拒绝，请联系管理员使用 /doc_reset_user 解除限制
+如果被拒绝，机器人将完全静默，请联系管理员使用 /doc_reset_user 解除限制
+管理员不受拒绝状态限制，可正常使用所有命令
 配置可在 WebUI → 插件配置 中修改
 
 版本：{self.doc_version}
