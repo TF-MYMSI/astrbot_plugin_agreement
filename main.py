@@ -108,10 +108,14 @@ class AgreementPlugin(Star):
         return f"doc_stat_group_{group_id}"
 
     async def _is_rejected(self, event: AstrMessageEvent) -> bool:
-        """检查用户是否处于拒绝状态"""
-        session = self._get_session_key(event)
-        status = await self.get_kv_data(session, None)
-        return status == self.STATE_REFUSED
+        """检查用户是否处于拒绝状态（管理员不受限制）"""
+        # 管理员不受拒绝状态限制
+        if self._is_admin(event.get_sender_id()):
+            return False
+    
+    session = self._get_session_key(event)
+    status = await self.get_kv_data(session, None)
+    return status == self.STATE_REFUSED
 
     # ==================== 统计方法 ====================
 
