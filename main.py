@@ -32,40 +32,28 @@ class AgreementPlugin(Star):
     # ==================== 配置加载 ====================
 
     def _load_config(self) -> None:
-        """加载所有配置"""
-        cfg = self.config
-        
-        self.admins: list = cfg.get("admins", [])
-        
-        scope = cfg.get("scope", {})
-        self.scope_private: bool = scope.get("private", True)
-        self.scope_group: bool = scope.get("group", False)
-        
-        doc = cfg.get("document", {})
-        self.doc_name: str = doc.get("name", "用户协议")
-        self.doc_version: str = doc.get("version", "v1.0")
-        self.doc_updated: str = doc.get("updated", "2026-04-06")
-        self.doc_contact: str = doc.get("contact", "QQ群 752775661")
-        
-        trigger = cfg.get("trigger", {})
-        self.trigger_keywords: list = trigger.get("keywords", ["协议", "规则", "条例"])
-        self.cooldown_seconds: int = trigger.get("cooldown", 30)
-        
-        delivery = cfg.get("delivery", {})
-        self.delivery_text: bool = delivery.get("text", True)
-        self.delivery_image: bool = delivery.get("image", False)
-        
-        image_cfg = cfg.get("image", {})
-        self.image_url: str = image_cfg.get("url", "")
-        self.image_path: str = image_cfg.get("path", "")
-        
-        replies = cfg.get("replies", {})
-        self.reply_agree: str = replies.get("agree", "已记录你的同意。现在可以正常使用本机器人。")
-        self.reply_refuse: str = replies.get("refuse", "已记录你的拒绝。本机器人将无法为你服务。")
-        self.reply_waiting: str = replies.get("waiting", "请回复「同意」或「不同意」接受{name}。")
-        
-        self.sections: list = cfg.get("sections", [])
-        self.doc_text: str = self._build_document() if self.delivery_text else ""
+    """加载所有配置"""
+    cfg = self.config
+    
+    self.admins = cfg.get("admins", [])
+    self.scope_private = cfg.get("scope_private", True)
+    self.scope_group = cfg.get("scope_group", False)
+    self.doc_name = cfg.get("doc_name", "用户协议")
+    self.doc_version = cfg.get("doc_version", "v1.0")
+    self.doc_updated = cfg.get("doc_updated", "2026-04-06")
+    self.doc_contact = cfg.get("doc_contact", "QQ群 752775661")
+    self.trigger_keywords = cfg.get("trigger_keywords", ["协议", "规则", "条例"])
+    self.cooldown_seconds = cfg.get("cooldown_seconds", 30)
+    self.delivery_text = cfg.get("delivery_text", True)
+    self.delivery_image = cfg.get("delivery_image", False)
+    self.image_url = cfg.get("image_url", "")
+    self.image_path = cfg.get("image_path", "")
+    self.reply_agree = cfg.get("reply_agree", "已记录你的同意。现在可以正常使用本机器人。")
+    self.reply_refuse = cfg.get("reply_refuse", "已记录你的拒绝。本机器人将无法为你服务。")
+    self.reply_waiting = cfg.get("reply_waiting", "请回复「同意」或「不同意」接受{name}。")
+    self.sections = cfg.get("doc_sections", [])
+    
+    self.doc_text = self._build_document() if self.delivery_text else ""
 
     def _build_document(self) -> str:
         """构建文字协议文本"""
