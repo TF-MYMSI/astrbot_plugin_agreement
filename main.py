@@ -100,15 +100,20 @@ class AgreementPlugin(Star):
 
     def _get_session_key(self, event: AstrMessageEvent) -> str:
         """获取会话存储键"""
-        if event.get_message_type() == "private" or event.get_group_id() is None:
+        # 修复：临时会话的 group_id 是空字符串，按私聊处理
+        group_id = event.get_group_id()
+        is_private = group_id is None or group_id == ""
+        if is_private:
             return f"doc_agree_{event.get_sender_id()}"
-        return f"doc_agree_{event.get_group_id()}_{event.get_sender_id()}"
+        return f"doc_agree_{group_id}_{event.get_sender_id()}"
 
     def _get_stat_key(self, event: AstrMessageEvent) -> str:
         """获取统计存储键"""
-        if event.get_message_type() == "private" or event.get_group_id() is None:
+        group_id = event.get_group_id()
+        is_private = group_id is None or group_id == ""
+        if is_private:
             return "doc_stat_private"
-        return f"doc_stat_group_{event.get_group_id()}"
+        return f"doc_stat_group_{group_id}"
 
     # ==================== 图片发送 ====================
 
@@ -167,20 +172,26 @@ class AgreementPlugin(Star):
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，根据类型分发"""
-        # 调试日志：记录收到的消息
+        # 调试日志
         logger.info(f"[DEBUG] 收到消息: {event.message_str}")
         logger.info(f"[DEBUG] get_message_type(): {event.get_message_type()}")
-        logger.info(f"[DEBUG] get_group_id(): {event.get_group_id()}")
+        group_id = event.get_group_id()
+        logger.info(f"[DEBUG] get_group_id(): '{group_id}'")
         logger.info(f"[DEBUG] scope_private: {self.scope_private}, scope_group: {self.scope_group}")
         
-        # 判断是否为群聊（有群号）
-        is_group = event.get_group_id() is not None
+        # 判断是否为群聊：群号存在且不为空字符串（修复临时会话问题）
+        is_group = group_id is not None and group_id != ""
         
         if is_group:
             logger.info(f"[DEBUG] 进入群聊分支")
+            # 群聊：检查开关 AND 是否被 @
             if not self.scope_group:
                 logger.info(f"[DEBUG] 群聊开关关闭，退出")
                 return
+            if not event.is_at_me():
+                logger.info(f"[DEBUG] 没有被 @，退出")
+                return
+            logger.info(f"[DEBUG] 群聊开关开启且被 @，继续处理")
             
             if not self.delivery_text and not self.delivery_image:
                 logger.info(f"[DEBUG] 文字和图片协议都未启用，退出")
@@ -239,6 +250,7 @@ class AgreementPlugin(Star):
         
         else:
             logger.info(f"[DEBUG] 进入私聊分支")
+            # 私聊：检查开关
             if not self.scope_private:
                 logger.info(f"[DEBUG] 私聊开关关闭，退出")
                 return
@@ -283,7 +295,7 @@ class AgreementPlugin(Star):
                         logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
                         async for r in self._send_document(event):
                             yield r
-                        event.stop_event()
+                    event.stop_event()
                     return
                 
                 if status == self.STATE_REFUSED:
@@ -434,7 +446,8 @@ class AgreementPlugin(Star):
         help_text = f"""【{self.doc_name}插件帮助】
 
 触发方式：
-发送包含「{'」、「'.join(self.trigger_keywords)}」的消息
+私聊：发送任意消息
+群聊：@机器人 并发送任意消息
 
 发送方式：{' + '.join(delivery_modes) if delivery_modes else '未启用'}
 
