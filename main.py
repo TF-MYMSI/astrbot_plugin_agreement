@@ -197,9 +197,12 @@ class AgreementPlugin(Star):
                 # 如果 is_at_me 不存在，手动检查消息链
                 bot_qq = str(event.get_self_id())
                 for segment in event.get_messages():
-                    if segment.type == "At" and str(segment.data.get("qq", "")) == bot_qq:
-                        is_at_me = True
-                        break
+                    if segment.type == "At":
+                        # 兼容不同的属性访问方式
+                        qq = getattr(segment, 'qq', None) or getattr(segment, 'target', None) or str(segment)
+                        if str(qq) == bot_qq:
+                            is_at_me = True
+                            break
                 if not is_at_me and f"@{bot_qq}" in event.message_str:
                     is_at_me = True
             
