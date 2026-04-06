@@ -173,9 +173,8 @@ class AgreementPlugin(Star):
 
     # ==================== 消息处理 ====================
 
-    @filter.on_message()
     async def on_message(self, event: AstrMessageEvent):
-        logger.info(f"协议插件收到消息: {event.message_str}")
+        """监听所有消息，实现状态机"""
         if not self._should_process(event):
             return
         
@@ -187,17 +186,19 @@ class AgreementPlugin(Star):
         status = await self.get_kv_data(session, None)
         
         try:
+            # 状态1：未签订（None）- 任何消息都触发
             if status is None:
-                if self._contains_keyword(event.message_str):
-                    logger.info(f"用户 {event.get_sender_id()} 触发关键词")
-                    await self.put_kv_data(session, self.STATE_WAITING)
-                    await self.put_kv_data(f"{session}_last", time.time())
-                    await self._add_to_user_list(stat_key, event.get_sender_id())
-                    async for r in self._send_document(event):
-                        yield r
-                    event.stop_event()
-                    
-            elif status == self.STATE_WAITING:
+                logger.info(f"用户 {event.get_sender_id()} 未签订，发送协议")
+                await self.put_kv_data(session, self.STATE_WAITING)
+                await self.put_kv_data(f"{session}_last", time.time())
+                await self._add_to_user_list(stat_key, event.get_sender_id())
+                async for r in self._send_document(event):
+                    yield r
+                event.stop_event()
+                return
+            
+            # 状态2：等待确认（waiting）
+            if status == self.STATE_WAITING:
                 msg = event.message_str
                 if "同意" in msg:
                     logger.info(f"用户 {event.get_sender_id()} 同意文档")
@@ -214,18 +215,21 @@ class AgreementPlugin(Star):
                     yield event.plain_result(self._format_reply(self.reply_refuse))
                     event.stop_event()
                 else:
-                    last_sent = await self.get_kv_data(f"{session}_last", 0)
-                    if time.time() - last_sent < self.cooldown_seconds:
-                        yield event.plain_result(self._format_reply(self.reply_waiting))
-                    else:
-                        await self.put_kv_data(f"{session}_last", time.time())
-                        async for r in self._send_document(event):
-                            yield r
+                    # 其他消息，重新发送协议
+                    logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+                    async for r in self._send_document(event):
+                        yield r
                     event.stop_event()
-                    
-            elif status == self.STATE_REFUSED:
+                return
+            
+            # 状态3：已拒绝（no）
+            if status == self.STATE_REFUSED:
                 event.stop_event()
-                
+                return
+            
+            # 状态4：已同意（yes），放行
+            return
+            
         except Exception as e:
             logger.error(f"文档插件处理消息时出错: {e}")
             yield event.plain_result("处理消息时出现错误，请稍后再试。")
