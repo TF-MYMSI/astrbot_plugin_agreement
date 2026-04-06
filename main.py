@@ -139,44 +139,9 @@ class AgreementPlugin(Star):
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # ========== 命令处理：拒绝状态下只放行 doc_undo ==========
-        try:
-            if event.is_command():
-                cmd_name = event.get_command_name() if hasattr(event, 'get_command_name') else None
-                
-                if cmd_name == "doc_undo":
-                    # doc_undo 允许执行，但需要阻止传递到 LLM
-                    event.stop_event()
-                    return
-                else:
-                    # 其他命令：检查拒绝状态
-                    if await self._is_rejected(event):
-                        # 拒绝状态下，其他命令静默拦截
-                        event.stop_event()
-                        return
-                    else:
-                        # 非拒绝状态，让命令正常执行，但阻止传递到 LLM
-                        event.stop_event()
-                        return
-        except AttributeError:
-            # 兼容旧版本：检查消息前缀
-            if msg.startswith("/") or msg.startswith("#"):
-                cmd_parts = msg.split()
-                if cmd_parts:
-                    cmd_name = cmd_parts[0].lstrip("/#")
-                    
-                    if cmd_name == "doc_undo":
-                        event.stop_event()
-                        return
-                    else:
-                        if await self._is_rejected(event):
-                            event.stop_event()
-                            return
-                        else:
-                            event.stop_event()
-                            return
+        # 【重要】不要在这里拦截命令！让 @filter.command 去处理
+        # 只处理非命令的普通消息
         
-        # 如果不是命令，继续处理普通消息
         if is_group:
             # ========== 群聊分支 ==========
             if not self.scope_group:
@@ -318,6 +283,7 @@ class AgreementPlugin(Star):
                 event.stop_event()
 
     # ==================== 命令 ====================
+    # 【核心】所有命令都在这里做拒绝状态检查，doc_undo 除外
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
