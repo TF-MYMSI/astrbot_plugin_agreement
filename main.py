@@ -8,11 +8,6 @@ import httpx
 import asyncio
 
 
-# 定义消息类型常量（根据你版本的实际情况）
-MSG_TYPE_PRIVATE = 1  # 私聊
-MSG_TYPE_GROUP = 2    # 群聊
-
-
 @register(
     "astrbot_plugin_agreement",
     "星恒梦落",
@@ -167,129 +162,128 @@ class AgreementPlugin(Star):
             await self.put_kv_data(f"{stat_key}_users", user_list)
             await self._update_stat(stat_key, "total")
 
-    # ==================== 私聊消息处理 ====================
+    # ==================== 消息处理 ====================
     
-    @filter.event_message_type(MSG_TYPE_PRIVATE)
     @filter.regex(r".*")
-    async def on_private_message(self, event: AstrMessageEvent):
-        """处理所有私聊消息"""
-        if not self.scope_private:
-            return
+    async def on_message(self, event: AstrMessageEvent):
+        """监听所有消息，根据类型分发"""
+        msg_type = event.get_message_type()
         
-        if not self.delivery_text and not self.delivery_image:
-            return
-        
-        session = self._get_session_key(event)
-        stat_key = self._get_stat_key(event)
-        status = await self.get_kv_data(session, None)
-        
-        try:
-            if status is None:
-                logger.info(f"用户 {event.get_sender_id()} 未签订，发送协议")
-                await self.put_kv_data(session, self.STATE_WAITING)
-                await self.put_kv_data(f"{session}_last", time.time())
-                await self._add_to_user_list(stat_key, event.get_sender_id())
-                async for r in self._send_document(event):
-                    yield r
-                event.stop_event()
+        # 私聊处理
+        if msg_type == "private":
+            if not self.scope_private:
                 return
             
-            if status == self.STATE_WAITING:
-                msg = event.message_str
-                if "同意" in msg:
-                    logger.info(f"用户 {event.get_sender_id()} 同意文档")
-                    await self.put_kv_data(session, self.STATE_AGREED)
-                    await self.put_kv_data(f"{session}_time", time.time())
-                    await self._update_stat(stat_key, "agreed")
-                    yield event.plain_result(self._format_reply(self.reply_agree))
-                    event.stop_event()
-                elif "不同意" in msg:
-                    logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
-                    await self.put_kv_data(session, self.STATE_REFUSED)
-                    await self.put_kv_data(f"{session}_time", time.time())
-                    await self._update_stat(stat_key, "refused")
-                    yield event.plain_result(self._format_reply(self.reply_refuse))
-                    event.stop_event()
-                else:
-                    logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+            if not self.delivery_text and not self.delivery_image:
+                return
+            
+            session = self._get_session_key(event)
+            stat_key = self._get_stat_key(event)
+            status = await self.get_kv_data(session, None)
+            
+            try:
+                if status is None:
+                    logger.info(f"用户 {event.get_sender_id()} 未签订，发送协议")
+                    await self.put_kv_data(session, self.STATE_WAITING)
+                    await self.put_kv_data(f"{session}_last", time.time())
+                    await self._add_to_user_list(stat_key, event.get_sender_id())
                     async for r in self._send_document(event):
                         yield r
                     event.stop_event()
-                return
-            
-            if status == self.STATE_REFUSED:
-                event.stop_event()
-                return
-            
-            # 已同意，放行
-            return
-            
-        except Exception as e:
-            logger.error(f"文档插件处理消息时出错: {e}")
-            yield event.plain_result("处理消息时出现错误，请稍后再试。")
-            event.stop_event()
-
-    # ==================== 群聊消息处理 ====================
-    
-    @filter.event_message_type(MSG_TYPE_GROUP)
-    @filter.regex(r".*")
-    async def on_group_message(self, event: AstrMessageEvent):
-        """处理所有群聊消息"""
-        if not self.scope_group:
-            return
-        
-        if not self.delivery_text and not self.delivery_image:
-            return
-        
-        session = self._get_session_key(event)
-        stat_key = self._get_stat_key(event)
-        status = await self.get_kv_data(session, None)
-        
-        try:
-            if status is None:
-                logger.info(f"群用户 {event.get_sender_id()} 未签订，发送协议")
-                await self.put_kv_data(session, self.STATE_WAITING)
-                await self.put_kv_data(f"{session}_last", time.time())
-                await self._add_to_user_list(stat_key, event.get_sender_id())
-                async for r in self._send_document(event):
-                    yield r
-                event.stop_event()
-                return
-            
-            if status == self.STATE_WAITING:
-                msg = event.message_str
-                if "同意" in msg:
-                    logger.info(f"群用户 {event.get_sender_id()} 同意文档")
-                    await self.put_kv_data(session, self.STATE_AGREED)
-                    await self.put_kv_data(f"{session}_time", time.time())
-                    await self._update_stat(stat_key, "agreed")
-                    yield event.plain_result(self._format_reply(self.reply_agree))
+                    return
+                
+                if status == self.STATE_WAITING:
+                    msg = event.message_str
+                    if "同意" in msg:
+                        logger.info(f"用户 {event.get_sender_id()} 同意文档")
+                        await self.put_kv_data(session, self.STATE_AGREED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "agreed")
+                        yield event.plain_result(self._format_reply(self.reply_agree))
+                        event.stop_event()
+                    elif "不同意" in msg:
+                        logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
+                        await self.put_kv_data(session, self.STATE_REFUSED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "refused")
+                        yield event.plain_result(self._format_reply(self.reply_refuse))
+                        event.stop_event()
+                    else:
+                        logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+                        async for r in self._send_document(event):
+                            yield r
+                        event.stop_event()
+                    return
+                
+                if status == self.STATE_REFUSED:
                     event.stop_event()
-                elif "不同意" in msg:
-                    logger.info(f"群用户 {event.get_sender_id()} 拒绝文档")
-                    await self.put_kv_data(session, self.STATE_REFUSED)
-                    await self.put_kv_data(f"{session}_time", time.time())
-                    await self._update_stat(stat_key, "refused")
-                    yield event.plain_result(self._format_reply(self.reply_refuse))
-                    event.stop_event()
-                else:
-                    logger.info(f"群用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+                    return
+                
+                # 已同意，放行
+                return
+                
+            except Exception as e:
+                logger.error(f"文档插件处理消息时出错: {e}")
+                yield event.plain_result("处理消息时出现错误，请稍后再试。")
+                event.stop_event()
+        
+        # 群聊处理
+        elif msg_type == "group":
+            if not self.scope_group:
+                return
+            
+            if not self.delivery_text and not self.delivery_image:
+                return
+            
+            session = self._get_session_key(event)
+            stat_key = self._get_stat_key(event)
+            status = await self.get_kv_data(session, None)
+            
+            try:
+                if status is None:
+                    logger.info(f"群用户 {event.get_sender_id()} 未签订，发送协议")
+                    await self.put_kv_data(session, self.STATE_WAITING)
+                    await self.put_kv_data(f"{session}_last", time.time())
+                    await self._add_to_user_list(stat_key, event.get_sender_id())
                     async for r in self._send_document(event):
                         yield r
                     event.stop_event()
+                    return
+                
+                if status == self.STATE_WAITING:
+                    msg = event.message_str
+                    if "同意" in msg:
+                        logger.info(f"群用户 {event.get_sender_id()} 同意文档")
+                        await self.put_kv_data(session, self.STATE_AGREED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "agreed")
+                        yield event.plain_result(self._format_reply(self.reply_agree))
+                        event.stop_event()
+                    elif "不同意" in msg:
+                        logger.info(f"群用户 {event.get_sender_id()} 拒绝文档")
+                        await self.put_kv_data(session, self.STATE_REFUSED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "refused")
+                        yield event.plain_result(self._format_reply(self.reply_refuse))
+                        event.stop_event()
+                    else:
+                        logger.info(f"群用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+                        async for r in self._send_document(event):
+                            yield r
+                        event.stop_event()
+                    return
+                
+                if status == self.STATE_REFUSED:
+                    event.stop_event()
+                    return
+                
+                # 已同意，放行
                 return
-            
-            if status == self.STATE_REFUSED:
+                
+            except Exception as e:
+                logger.error(f"文档插件处理消息时出错: {e}")
+                yield event.plain_result("处理消息时出现错误，请稍后再试。")
                 event.stop_event()
-                return
-            
-            # 已同意，放行
-            return
-            
-        except Exception as e:
-            logger.error(f"文档插件处理消息时出错: {e}")
-            yield event.plain_result("处理消息时出现错误，请稍后再试。")
-            event.stop_event()
 
     # ==================== 管理员命令 ====================
 
