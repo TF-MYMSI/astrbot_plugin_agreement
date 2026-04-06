@@ -107,6 +107,15 @@ class AgreementPlugin(Star):
             return "doc_stat_private"
         return f"doc_stat_group_{group_id}"
 
+    async def _check_rejected_and_stop(self, event: AstrMessageEvent) -> bool:
+        """检查用户是否处于拒绝状态，如果是则停止事件并返回 True"""
+        session = self._get_session_key(event)
+        status = await self.get_kv_data(session, None)
+        if status == self.STATE_REFUSED:
+            event.stop_event()
+            return True
+        return False
+
     # ==================== 统计方法 ====================
 
     async def _update_stat(self, stat_key: str, field: str, delta: int = 1) -> None:
@@ -133,39 +142,13 @@ class AgreementPlugin(Star):
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # ========== 命令处理：拒绝状态下只放行 doc_undo ==========
+        # 命令已经在 @filter.command 中处理，这里不拦截命令
         try:
             if event.is_command():
-                cmd_name = event.get_command_name() if hasattr(event, 'get_command_name') else None
-                if cmd_name == "doc_undo":
-                    # doc_undo 命令继续执行，不拦截
-                    pass
-                else:
-                    # 其他命令需要检查用户状态
-                    session = self._get_session_key(event)
-                    status = await self.get_kv_data(session, None)
-                    if status == self.STATE_REFUSED:
-                        # 拒绝状态下，其他命令不回复
-                        event.stop_event()
-                        return
-                    # 非拒绝状态，命令正常处理
-                    return
+                return
         except AttributeError:
-            # 兼容旧版本：检查消息前缀
             if msg.startswith("/") or msg.startswith("#"):
-                cmd_parts = msg.split()
-                if cmd_parts:
-                    cmd_name = cmd_parts[0].lstrip("/#")
-                    if cmd_name == "doc_undo":
-                        # doc_undo 继续执行
-                        pass
-                    else:
-                        session = self._get_session_key(event)
-                        status = await self.get_kv_data(session, None)
-                        if status == self.STATE_REFUSED:
-                            event.stop_event()
-                            return
-                        return
+                return
         
         if is_group:
             # ========== 群聊分支 ==========
@@ -234,8 +217,7 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_REFUSED:
-                    # 【核心修改】已拒绝用户：静默，不回复任何消息
-                    # doc_undo 命令已在上面被放行，这里直接停止
+                    # 已拒绝用户：静默，不回复任何消息
                     event.stop_event()
                     return
                 
@@ -296,8 +278,7 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_REFUSED:
-                    # 【核心修改】已拒绝用户：静默，不回复任何消息
-                    # doc_undo 命令已在上面被放行，这里直接停止
+                    # 已拒绝用户：静默，不回复任何消息
                     event.stop_event()
                     return
                 
@@ -309,11 +290,15 @@ class AgreementPlugin(Star):
                 yield event.plain_result("处理消息时出现错误，请稍后再试。")
                 event.stop_event()
 
-    # ==================== 管理员命令 ====================
+    # ==================== 命令 ====================
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
         """查看文档签订统计"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         stat_key = self._get_stat_key(event)
         msg_type = "私聊" if event.get_message_type() == "private" else "本群"
         
@@ -330,6 +315,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_list")
     async def cmd_list(self, event: AstrMessageEvent):
         """查看用户列表（仅管理员）"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         if not self._is_admin(event.get_sender_id()):
             yield event.plain_result("只有管理员可以使用此命令。")
             event.stop_event()
@@ -368,6 +357,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset")
     async def cmd_reset(self, event: AstrMessageEvent):
         """重置统计数据（仅管理员）"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         if not self._is_admin(event.get_sender_id()):
             yield event.plain_result("只有管理员可以使用此命令。")
             event.stop_event()
@@ -387,6 +380,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_reload")
     async def cmd_reload(self, event: AstrMessageEvent):
         """重新加载配置（仅管理员）"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         if not self._is_admin(event.get_sender_id()):
             yield event.plain_result("只有管理员可以使用此命令。")
             event.stop_event()
@@ -411,6 +408,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_status")
     async def cmd_status(self, event: AstrMessageEvent):
         """查看个人文档签订状态"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         session = self._get_session_key(event)
         status = await self.get_kv_data(session, None)
         
@@ -434,6 +435,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_undo")
     async def cmd_undo(self, event: AstrMessageEvent):
         """反悔：重新签订协议（用户主动重置自己的状态）"""
+        # 【核心】doc_undo 不检查拒绝状态，始终可以执行
         session = self._get_session_key(event)
         status = await self.get_kv_data(session, None)
         
@@ -453,6 +455,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset_user")
     async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
         """管理员：重置指定用户的协议状态"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         if not self._is_admin(event.get_sender_id()):
             yield event.plain_result("只有管理员可以使用此命令。")
             event.stop_event()
@@ -476,6 +482,10 @@ class AgreementPlugin(Star):
     @filter.command("doc_help")
     async def cmd_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
+        # 拒绝状态下不执行
+        if await self._check_rejected_and_stop(event):
+            return
+        
         delivery_modes = []
         if self.delivery_text:
             delivery_modes.append("文字")
