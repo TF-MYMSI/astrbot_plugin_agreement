@@ -191,7 +191,7 @@ class AgreementPlugin(Star):
                 await self._add_to_user_list(stat_key, event.get_sender_id())
                 async for r in self._send_document(event):
                     yield r
-                event.stop_event()
+                event.stop_event()  # 阻止消息继续传递
                 return
             
             # 状态2：等待确认（waiting）
@@ -212,6 +212,7 @@ class AgreementPlugin(Star):
                     yield event.plain_result(self._format_reply(self.reply_refuse))
                     event.stop_event()
                 else:
+                    # 其他消息，重新发送协议
                     logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
                     async for r in self._send_document(event):
                         yield r
@@ -223,7 +224,7 @@ class AgreementPlugin(Star):
                 event.stop_event()
                 return
             
-            # 状态4：已同意（yes），放行
+            # 状态4：已同意（yes），放行（不调用 stop_event）
             return
             
         except Exception as e:
