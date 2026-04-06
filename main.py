@@ -173,7 +173,7 @@ class AgreementPlugin(Star):
 
     # ==================== 消息处理 ====================
 
-    @filter.event_message_type(“all”)
+    @filter.event_message_type("all")
     async def on_all_message(self, event: AstrMessageEvent):
         """监听所有消息，实现状态机"""
         if not self._should_process(event):
