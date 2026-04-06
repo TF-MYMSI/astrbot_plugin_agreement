@@ -10,7 +10,7 @@ import asyncio
 
 @register(
     "astrbot_plugin_agreement",
-    "YHJM",
+    "YourName",
     "文档签订插件",
     "1.0.0"
 )
@@ -174,19 +174,19 @@ class AgreementPlugin(Star):
                 
                 if status == self.STATE_WAITING:
                     msg = event.message_str
-                    if "同意" in msg:
-                        logger.info(f"群用户 {event.get_sender_id()} 同意文档")
-                        await self.put_kv_data(session, self.STATE_AGREED)
-                        await self.put_kv_data(f"{session}_time", time.time())
-                        await self._update_stat(stat_key, "agreed")
-                        yield event.plain_result(self._format_reply(self.reply_agree))
-                        event.stop_event()
-                    elif "不同意" in msg:
+                    if "不同意" in msg:
                         logger.info(f"群用户 {event.get_sender_id()} 拒绝文档")
                         await self.put_kv_data(session, self.STATE_REFUSED)
                         await self.put_kv_data(f"{session}_time", time.time())
                         await self._update_stat(stat_key, "refused")
                         yield event.plain_result(self._format_reply(self.reply_refuse))
+                        event.stop_event()
+                    elif "同意" in msg:
+                        logger.info(f"群用户 {event.get_sender_id()} 同意文档")
+                        await self.put_kv_data(session, self.STATE_AGREED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "agreed")
+                        yield event.plain_result(self._format_reply(self.reply_agree))
                         event.stop_event()
                     else:
                         last_sent = await self.get_kv_data(f"{session}_last", 0)
@@ -241,19 +241,19 @@ class AgreementPlugin(Star):
                 
                 if status == self.STATE_WAITING:
                     msg = event.message_str
-                    if "同意" in msg:
-                        logger.info(f"用户 {event.get_sender_id()} 同意文档")
-                        await self.put_kv_data(session, self.STATE_AGREED)
-                        await self.put_kv_data(f"{session}_time", time.time())
-                        await self._update_stat(stat_key, "agreed")
-                        yield event.plain_result(self._format_reply(self.reply_agree))
-                        event.stop_event()
-                    elif "不同意" in msg:
+                    if "不同意" in msg:
                         logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
                         await self.put_kv_data(session, self.STATE_REFUSED)
                         await self.put_kv_data(f"{session}_time", time.time())
                         await self._update_stat(stat_key, "refused")
                         yield event.plain_result(self._format_reply(self.reply_refuse))
+                        event.stop_event()
+                    elif "同意" in msg:
+                        logger.info(f"用户 {event.get_sender_id()} 同意文档")
+                        await self.put_kv_data(session, self.STATE_AGREED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "agreed")
+                        yield event.plain_result(self._format_reply(self.reply_agree))
                         event.stop_event()
                     else:
                         last_sent = await self.get_kv_data(f"{session}_last", 0)
