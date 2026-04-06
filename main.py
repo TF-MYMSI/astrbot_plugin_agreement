@@ -110,15 +110,6 @@ class AgreementPlugin(Star):
             return "doc_stat_private"
         return f"doc_stat_group_{event.get_group_id()}"
 
-    def _should_process(self, event: AstrMessageEvent) -> bool:
-        """检查是否应该处理该消息"""
-        msg_type = event.get_message_type()
-        if msg_type == "private" and not self.scope_private:
-            return False
-        if msg_type == "group" and not self.scope_group:
-            return False
-        return True
-
     # ==================== 图片发送 ====================
 
     async def _send_image(self, event: AstrMessageEvent):
@@ -171,12 +162,17 @@ class AgreementPlugin(Star):
             await self.put_kv_data(f"{stat_key}_users", user_list)
             await self._update_stat(stat_key, "total")
 
-    # ==================== 消息处理 ====================
+    # ==================== 私聊消息处理 ====================
     
-    @filter.regex(r".*")  # 匹配所有消息
-    async def on_message(self, event: AstrMessageEvent):
-        """监听所有消息，实现状态机"""
-        if not self._should_process(event):
+    @filter.regex(r".*")
+    async def on_private_message(self, event: AstrMessageEvent):
+        """只处理私聊消息"""
+        # 只处理私聊
+        if event.get_message_type() != "private":
+            return
+        
+        # 检查私聊开关
+        if not self.scope_private:
             return
         
         if not self.delivery_text and not self.delivery_image:
@@ -216,7 +212,6 @@ class AgreementPlugin(Star):
                     yield event.plain_result(self._format_reply(self.reply_refuse))
                     event.stop_event()
                 else:
-                    # 其他消息，重新发送协议
                     logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
                     async for r in self._send_document(event):
                         yield r
@@ -235,6 +230,25 @@ class AgreementPlugin(Star):
             logger.error(f"文档插件处理消息时出错: {e}")
             yield event.plain_result("处理消息时出现错误，请稍后再试。")
             event.stop_event()
+
+    # ==================== 群聊消息处理 ====================
+    
+    @filter.regex(r".*")
+    async def on_group_message(self, event: AstrMessageEvent):
+        """群聊消息处理（根据配置决定是否响应）"""
+        # 只处理群聊
+        if event.get_message_type() != "group":
+            return
+        
+        # 检查群聊开关
+        if not self.scope_group:
+            return
+        
+        # 群聊的协议签订逻辑（如果需要的话）
+        # 目前群聊只记录，不主动发送协议
+        logger.info(f"群聊消息: {event.message_str}，群聊开关已关闭，不处理")
+        # 如果需要群聊也支持协议签订，可以在这里添加逻辑
+        return
 
     # ==================== 管理员命令 ====================
 
