@@ -184,11 +184,26 @@ class AgreementPlugin(Star):
         
         if is_group:
             logger.info(f"[DEBUG] 进入群聊分支")
-            # 群聊：检查开关 AND 是否被 @
+            # 群聊：检查开关
             if not self.scope_group:
                 logger.info(f"[DEBUG] 群聊开关关闭，退出")
                 return
-            if not event.is_at_me():
+            
+            # 检查是否被 @（兼容不同版本）
+            is_at_me = False
+            try:
+                is_at_me = event.is_at_me()
+            except AttributeError:
+                # 如果 is_at_me 不存在，手动检查消息链
+                bot_qq = str(event.get_self_id())
+                for segment in event.get_messages():
+                    if segment.type == "At" and str(segment.data.get("qq", "")) == bot_qq:
+                        is_at_me = True
+                        break
+                if not is_at_me and f"@{bot_qq}" in event.message_str:
+                    is_at_me = True
+            
+            if not is_at_me:
                 logger.info(f"[DEBUG] 没有被 @，退出")
                 return
             logger.info(f"[DEBUG] 群聊开关开启且被 @，继续处理")
@@ -249,6 +264,7 @@ class AgreementPlugin(Star):
                 event.stop_event()
         
         else:
+            # 私聊分支保持不变
             logger.info(f"[DEBUG] 进入私聊分支")
             # 私聊：检查开关
             if not self.scope_private:
@@ -295,7 +311,7 @@ class AgreementPlugin(Star):
                         logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
                         async for r in self._send_document(event):
                             yield r
-                    event.stop_event()
+                        event.stop_event()
                     return
                 
                 if status == self.STATE_REFUSED:
