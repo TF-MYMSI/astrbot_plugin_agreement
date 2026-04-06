@@ -129,8 +129,18 @@ class AgreementPlugin(Star):
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，根据类型分发"""
+        msg = event.message_str
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
+        
+        # 命令优先处理，不检查协议状态（支持 AstrBot 配置的所有命令前缀）
+        try:
+            if event.is_command():
+                return
+        except AttributeError:
+            # 兼容旧版本
+            if msg.startswith("/") or msg.startswith("#"):
+                return
         
         if is_group:
             # 群聊分支
@@ -149,7 +159,7 @@ class AgreementPlugin(Star):
                         if str(qq) == bot_qq:
                             is_at_me = True
                             break
-                if not is_at_me and f"@{bot_qq}" in event.message_str:
+                if not is_at_me and f"@{bot_qq}" in msg:
                     is_at_me = True
             
             if not is_at_me:
@@ -173,15 +183,15 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_WAITING:
-                    msg = event.message_str
-                    if "不同意" in msg:
+                    msg_content = event.message_str
+                    if "不同意" in msg_content:
                         logger.info(f"群用户 {event.get_sender_id()} 拒绝文档")
                         await self.put_kv_data(session, self.STATE_REFUSED)
                         await self.put_kv_data(f"{session}_time", time.time())
                         await self._update_stat(stat_key, "refused")
                         yield event.plain_result(self._format_reply(self.reply_refuse))
                         event.stop_event()
-                    elif "同意" in msg:
+                    elif "同意" in msg_content:
                         logger.info(f"群用户 {event.get_sender_id()} 同意文档")
                         await self.put_kv_data(session, self.STATE_AGREED)
                         await self.put_kv_data(f"{session}_time", time.time())
@@ -200,7 +210,7 @@ class AgreementPlugin(Star):
                 
                 if status == self.STATE_REFUSED:
                     # 已拒绝用户：检查是否重新触发
-                    if self._contains_keyword(event.message_str):
+                    if self._contains_keyword(msg):
                         logger.info(f"群用户 {event.get_sender_id()} 重新触发，重置状态")
                         await self.put_kv_data(session, None)
                         await self.put_kv_data(session, self.STATE_WAITING)
@@ -240,15 +250,15 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_WAITING:
-                    msg = event.message_str
-                    if "不同意" in msg:
+                    msg_content = event.message_str
+                    if "不同意" in msg_content:
                         logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
                         await self.put_kv_data(session, self.STATE_REFUSED)
                         await self.put_kv_data(f"{session}_time", time.time())
                         await self._update_stat(stat_key, "refused")
                         yield event.plain_result(self._format_reply(self.reply_refuse))
                         event.stop_event()
-                    elif "同意" in msg:
+                    elif "同意" in msg_content:
                         logger.info(f"用户 {event.get_sender_id()} 同意文档")
                         await self.put_kv_data(session, self.STATE_AGREED)
                         await self.put_kv_data(f"{session}_time", time.time())
@@ -267,7 +277,7 @@ class AgreementPlugin(Star):
                 
                 if status == self.STATE_REFUSED:
                     # 已拒绝用户：检查是否重新触发
-                    if self._contains_keyword(event.message_str):
+                    if self._contains_keyword(msg):
                         logger.info(f"用户 {event.get_sender_id()} 重新触发，重置状态")
                         await self.put_kv_data(session, None)
                         await self.put_kv_data(session, self.STATE_WAITING)
