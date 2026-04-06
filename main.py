@@ -100,13 +100,13 @@ class AgreementPlugin(Star):
 
     def _get_session_key(self, event: AstrMessageEvent) -> str:
         """获取会话存储键"""
-        if event.get_message_type() == "private":
+        if event.get_message_type() == "private" or event.get_group_id() is None:
             return f"doc_agree_{event.get_sender_id()}"
         return f"doc_agree_{event.get_group_id()}_{event.get_sender_id()}"
 
     def _get_stat_key(self, event: AstrMessageEvent) -> str:
         """获取统计存储键"""
-        if event.get_message_type() == "private":
+        if event.get_message_type() == "private" or event.get_group_id() is None:
             return "doc_stat_private"
         return f"doc_stat_group_{event.get_group_id()}"
 
@@ -167,81 +167,33 @@ class AgreementPlugin(Star):
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，根据类型分发"""
-        msg_type = event.get_message_type()
+        # 调试日志：记录收到的消息
+        logger.info(f"[DEBUG] 收到消息: {event.message_str}")
+        logger.info(f"[DEBUG] get_message_type(): {event.get_message_type()}")
+        logger.info(f"[DEBUG] get_group_id(): {event.get_group_id()}")
+        logger.info(f"[DEBUG] scope_private: {self.scope_private}, scope_group: {self.scope_group}")
         
-        # 私聊处理
-        if msg_type == "private":
-            if not self.scope_private:
-                return
-            
-            if not self.delivery_text and not self.delivery_image:
-                return
-            
-            session = self._get_session_key(event)
-            stat_key = self._get_stat_key(event)
-            status = await self.get_kv_data(session, None)
-            
-            try:
-                if status is None:
-                    logger.info(f"用户 {event.get_sender_id()} 未签订，发送协议")
-                    await self.put_kv_data(session, self.STATE_WAITING)
-                    await self.put_kv_data(f"{session}_last", time.time())
-                    await self._add_to_user_list(stat_key, event.get_sender_id())
-                    async for r in self._send_document(event):
-                        yield r
-                    event.stop_event()
-                    return
-                
-                if status == self.STATE_WAITING:
-                    msg = event.message_str
-                    if "同意" in msg:
-                        logger.info(f"用户 {event.get_sender_id()} 同意文档")
-                        await self.put_kv_data(session, self.STATE_AGREED)
-                        await self.put_kv_data(f"{session}_time", time.time())
-                        await self._update_stat(stat_key, "agreed")
-                        yield event.plain_result(self._format_reply(self.reply_agree))
-                        event.stop_event()
-                    elif "不同意" in msg:
-                        logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
-                        await self.put_kv_data(session, self.STATE_REFUSED)
-                        await self.put_kv_data(f"{session}_time", time.time())
-                        await self._update_stat(stat_key, "refused")
-                        yield event.plain_result(self._format_reply(self.reply_refuse))
-                        event.stop_event()
-                    else:
-                        logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
-                        async for r in self._send_document(event):
-                            yield r
-                        event.stop_event()
-                    return
-                
-                if status == self.STATE_REFUSED:
-                    event.stop_event()
-                    return
-                
-                # 已同意，放行
-                return
-                
-            except Exception as e:
-                logger.error(f"文档插件处理消息时出错: {e}")
-                yield event.plain_result("处理消息时出现错误，请稍后再试。")
-                event.stop_event()
+        # 判断是否为群聊（有群号）
+        is_group = event.get_group_id() is not None
         
-        # 群聊处理
-        elif msg_type == "group":
+        if is_group:
+            logger.info(f"[DEBUG] 进入群聊分支")
             if not self.scope_group:
+                logger.info(f"[DEBUG] 群聊开关关闭，退出")
                 return
             
             if not self.delivery_text and not self.delivery_image:
+                logger.info(f"[DEBUG] 文字和图片协议都未启用，退出")
                 return
             
             session = self._get_session_key(event)
             stat_key = self._get_stat_key(event)
             status = await self.get_kv_data(session, None)
+            logger.info(f"[DEBUG] 群聊用户状态: {status}")
             
             try:
                 if status is None:
-                    logger.info(f"群用户 {event.get_sender_id()} 未签订，发送协议")
+                    logger.info(f"[DEBUG] 群用户 {event.get_sender_id()} 未签订，发送协议")
                     await self.put_kv_data(session, self.STATE_WAITING)
                     await self.put_kv_data(f"{session}_last", time.time())
                     await self._add_to_user_list(stat_key, event.get_sender_id())
@@ -268,6 +220,67 @@ class AgreementPlugin(Star):
                         event.stop_event()
                     else:
                         logger.info(f"群用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
+                        async for r in self._send_document(event):
+                            yield r
+                        event.stop_event()
+                    return
+                
+                if status == self.STATE_REFUSED:
+                    event.stop_event()
+                    return
+                
+                # 已同意，放行
+                return
+                
+            except Exception as e:
+                logger.error(f"文档插件处理消息时出错: {e}")
+                yield event.plain_result("处理消息时出现错误，请稍后再试。")
+                event.stop_event()
+        
+        else:
+            logger.info(f"[DEBUG] 进入私聊分支")
+            if not self.scope_private:
+                logger.info(f"[DEBUG] 私聊开关关闭，退出")
+                return
+            
+            if not self.delivery_text and not self.delivery_image:
+                logger.info(f"[DEBUG] 文字和图片协议都未启用，退出")
+                return
+            
+            session = self._get_session_key(event)
+            stat_key = self._get_stat_key(event)
+            status = await self.get_kv_data(session, None)
+            logger.info(f"[DEBUG] 私聊用户状态: {status}")
+            
+            try:
+                if status is None:
+                    logger.info(f"[DEBUG] 用户 {event.get_sender_id()} 未签订，发送协议")
+                    await self.put_kv_data(session, self.STATE_WAITING)
+                    await self.put_kv_data(f"{session}_last", time.time())
+                    await self._add_to_user_list(stat_key, event.get_sender_id())
+                    async for r in self._send_document(event):
+                        yield r
+                    event.stop_event()
+                    return
+                
+                if status == self.STATE_WAITING:
+                    msg = event.message_str
+                    if "同意" in msg:
+                        logger.info(f"用户 {event.get_sender_id()} 同意文档")
+                        await self.put_kv_data(session, self.STATE_AGREED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "agreed")
+                        yield event.plain_result(self._format_reply(self.reply_agree))
+                        event.stop_event()
+                    elif "不同意" in msg:
+                        logger.info(f"用户 {event.get_sender_id()} 拒绝文档")
+                        await self.put_kv_data(session, self.STATE_REFUSED)
+                        await self.put_kv_data(f"{session}_time", time.time())
+                        await self._update_stat(stat_key, "refused")
+                        yield event.plain_result(self._format_reply(self.reply_refuse))
+                        event.stop_event()
+                    else:
+                        logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
                         async for r in self._send_document(event):
                             yield r
                         event.stop_event()
