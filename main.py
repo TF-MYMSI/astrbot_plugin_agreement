@@ -1,3 +1,12 @@
+from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.star import Context, Star, register  # ✅ 必须有 register
+from astrbot.api.message_components import Image, Plain
+from astrbot.api import logger
+import time
+import os
+import httpx
+import asyncio
+
 @register(
     "astrbot_plugin_agreement",
     "星恒梦落",
