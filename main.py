@@ -134,12 +134,17 @@ class AgreementPlugin(Star):
     
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
-        """只处理非命令的普通消息（协议签订流程）"""
+        """监听所有消息"""
         msg = event.message_str
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # 【关键】如果是命令，直接返回，让 @filter.command 处理
+        # 【核心】先检查拒绝状态，如果是拒绝状态，直接静默返回，不处理任何消息
+        if await self._is_rejected(event):
+            event.stop_event()
+            return
+        
+        # 命令优先处理，不检查协议状态
         try:
             if event.is_command():
                 return
@@ -213,11 +218,6 @@ class AgreementPlugin(Star):
                         event.stop_event()
                     return
                 
-                if status == self.STATE_REFUSED:
-                    # 已拒绝用户：静默，不回复任何消息
-                    event.stop_event()
-                    return
-                
                 # 已同意，放行
                 return
                 
@@ -274,11 +274,6 @@ class AgreementPlugin(Star):
                         event.stop_event()
                     return
                 
-                if status == self.STATE_REFUSED:
-                    # 已拒绝用户：静默，不回复任何消息
-                    event.stop_event()
-                    return
-                
                 # 已同意，放行
                 return
                 
@@ -288,11 +283,13 @@ class AgreementPlugin(Star):
                 event.stop_event()
 
     # ==================== 命令 ====================
+    # 注意：所有命令都需要检查拒绝状态，拒绝状态下不执行任何命令
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
         """查看文档签订统计"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         stat_key = self._get_stat_key(event)
@@ -312,6 +309,7 @@ class AgreementPlugin(Star):
     async def cmd_list(self, event: AstrMessageEvent):
         """查看用户列表（仅管理员）"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -353,6 +351,7 @@ class AgreementPlugin(Star):
     async def cmd_reset(self, event: AstrMessageEvent):
         """重置统计数据（仅管理员）"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -375,6 +374,7 @@ class AgreementPlugin(Star):
     async def cmd_reload(self, event: AstrMessageEvent):
         """重新加载配置（仅管理员）"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -402,6 +402,7 @@ class AgreementPlugin(Star):
     async def cmd_status(self, event: AstrMessageEvent):
         """查看个人文档签订状态"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         session = self._get_session_key(event)
@@ -424,30 +425,13 @@ class AgreementPlugin(Star):
         yield event.plain_result(result)
         event.stop_event()
 
-    @filter.command("doc_undo")
-    async def cmd_undo(self, event: AstrMessageEvent):
-        """反悔：重新签订协议（用户主动重置自己的状态）"""
-        # 【核心】doc_undo 不检查拒绝状态，始终可以执行
-        session = self._get_session_key(event)
-        status = await self.get_kv_data(session, None)
-        
-        if status == self.STATE_REFUSED:
-            await self.put_kv_data(session, None)
-            yield event.plain_result(f"✅ 已清除你的拒绝状态。请重新发送「{self.trigger_keywords[0]}」开始签订。")
-        elif status == self.STATE_AGREED:
-            await self.put_kv_data(session, None)
-            yield event.plain_result(f"✅ 已撤销你的同意。请重新发送「{self.trigger_keywords[0]}」开始签订。")
-        elif status == self.STATE_WAITING:
-            await self.put_kv_data(session, None)
-            yield event.plain_result(f"✅ 已取消当前协议签订流程。请重新发送「{self.trigger_keywords[0]}」开始。")
-        else:
-            yield event.plain_result("你还没有签订过协议，无需反悔。")
-        event.stop_event()
-
     @filter.command("doc_reset_user")
     async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
         """管理员：重置指定用户的协议状态"""
+        # 管理员命令也不响应拒绝状态的用户，但管理员自己可以执行
+        # 如果管理员自己处于拒绝状态，那也不执行
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -473,6 +457,7 @@ class AgreementPlugin(Star):
     async def cmd_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
         if await self._is_rejected(event):
+            event.stop_event()
             return
         
         delivery_modes = []
@@ -494,7 +479,6 @@ class AgreementPlugin(Star):
 📊 用户命令：
 /doc_stats  - 查看统计
 /doc_status - 查看个人状态
-/doc_undo   - 反悔，重新签订协议
 /doc_help   - 显示本帮助
 
 🔧 管理员命令：
@@ -505,7 +489,7 @@ class AgreementPlugin(Star):
 
 💡 提示：
 回复「同意」接受文档，回复「不同意」拒绝
-如果反悔了，发送 /doc_undo 可重新签订
+如果被拒绝，请联系管理员使用 /doc_reset_user 解除限制
 配置可在 WebUI → 插件配置 中修改
 
 版本：{self.doc_version}
