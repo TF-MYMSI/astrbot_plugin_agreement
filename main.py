@@ -173,6 +173,7 @@ class AgreementPlugin(Star):
 
     # ==================== 消息处理 ====================
 
+    @filter.on_message()
     async def on_message(self, event: AstrMessageEvent):
         logger.info(f"协议插件收到消息: {event.message_str}")
         if not self._should_process(event):
