@@ -1,11 +1,11 @@
-from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star, register
-from astrbot.api.message_components import Image, Plain
-from astrbot.api import logger, AstrBotConfig
 import time
 import os
 import httpx
 import asyncio
+from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.star import Context, Star, register
+from astrbot.api.message_components import Image, Plain
+from astrbot.api import logger, AstrBotConfig
 
 
 @register(
@@ -133,17 +133,42 @@ class AgreementPlugin(Star):
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # 命令优先处理，不检查协议状态（支持 AstrBot 配置的所有命令前缀）
+        # ========== 命令处理：拒绝状态下只放行 doc_undo ==========
         try:
             if event.is_command():
-                return
+                cmd_name = event.get_command_name() if hasattr(event, 'get_command_name') else None
+                if cmd_name == "doc_undo":
+                    # doc_undo 命令继续执行，不拦截
+                    pass
+                else:
+                    # 其他命令需要检查用户状态
+                    session = self._get_session_key(event)
+                    status = await self.get_kv_data(session, None)
+                    if status == self.STATE_REFUSED:
+                        # 拒绝状态下，其他命令不回复
+                        event.stop_event()
+                        return
+                    # 非拒绝状态，命令正常处理
+                    return
         except AttributeError:
-            # 兼容旧版本
+            # 兼容旧版本：检查消息前缀
             if msg.startswith("/") or msg.startswith("#"):
-                return
+                cmd_parts = msg.split()
+                if cmd_parts:
+                    cmd_name = cmd_parts[0].lstrip("/#")
+                    if cmd_name == "doc_undo":
+                        # doc_undo 继续执行
+                        pass
+                    else:
+                        session = self._get_session_key(event)
+                        status = await self.get_kv_data(session, None)
+                        if status == self.STATE_REFUSED:
+                            event.stop_event()
+                            return
+                        return
         
         if is_group:
-            # 群聊分支
+            # ========== 群聊分支 ==========
             if not self.scope_group:
                 return
             
@@ -209,13 +234,8 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_REFUSED:
-                    # 已拒绝用户：检查是否重新触发
-                    if self._contains_keyword(msg):
-                        logger.info(f"群用户 {event.get_sender_id()} 重新触发，重置状态")
-                        await self.put_kv_data(session, None)
-                        await self.put_kv_data(session, self.STATE_WAITING)
-                        await self.put_kv_data(f"{session}_last", time.time())
-                        yield event.plain_result(self.doc_text)
+                    # 【核心修改】已拒绝用户：静默，不回复任何消息
+                    # doc_undo 命令已在上面被放行，这里直接停止
                     event.stop_event()
                     return
                 
@@ -228,7 +248,7 @@ class AgreementPlugin(Star):
                 event.stop_event()
         
         else:
-            # 私聊分支
+            # ========== 私聊分支 ==========
             if not self.scope_private:
                 return
             
@@ -276,13 +296,8 @@ class AgreementPlugin(Star):
                     return
                 
                 if status == self.STATE_REFUSED:
-                    # 已拒绝用户：检查是否重新触发
-                    if self._contains_keyword(msg):
-                        logger.info(f"用户 {event.get_sender_id()} 重新触发，重置状态")
-                        await self.put_kv_data(session, None)
-                        await self.put_kv_data(session, self.STATE_WAITING)
-                        await self.put_kv_data(f"{session}_last", time.time())
-                        yield event.plain_result(self.doc_text)
+                    # 【核心修改】已拒绝用户：静默，不回复任何消息
+                    # doc_undo 命令已在上面被放行，这里直接停止
                     event.stop_event()
                     return
                 
@@ -424,13 +439,13 @@ class AgreementPlugin(Star):
         
         if status == self.STATE_REFUSED:
             await self.put_kv_data(session, None)
-            yield event.plain_result(f"已重置你的协议状态。请重新发送「{self.trigger_keywords[0]}」开始签订。")
+            yield event.plain_result(f"✅ 已清除你的拒绝状态。请重新发送「{self.trigger_keywords[0]}」开始签订。")
         elif status == self.STATE_AGREED:
             await self.put_kv_data(session, None)
-            yield event.plain_result(f"已撤销你的同意。请重新发送「{self.trigger_keywords[0]}」开始签订。")
+            yield event.plain_result(f"✅ 已撤销你的同意。请重新发送「{self.trigger_keywords[0]}」开始签订。")
         elif status == self.STATE_WAITING:
             await self.put_kv_data(session, None)
-            yield event.plain_result(f"已取消当前协议签订流程。请重新发送「{self.trigger_keywords[0]}」开始。")
+            yield event.plain_result(f"✅ 已取消当前协议签订流程。请重新发送「{self.trigger_keywords[0]}」开始。")
         else:
             yield event.plain_result("你还没有签订过协议，无需反悔。")
         event.stop_event()
@@ -448,9 +463,14 @@ class AgreementPlugin(Star):
             event.stop_event()
             return
         
-        session = f"doc_agree_{user_id}"
+        # 支持群聊和私聊的session格式
+        group_id = event.get_group_id()
+        if group_id and group_id != "":
+            session = f"doc_agree_{group_id}_{user_id}"
+        else:
+            session = f"doc_agree_{user_id}"
         await self.put_kv_data(session, None)
-        yield event.plain_result(f"已重置用户 {user_id} 的协议状态。")
+        yield event.plain_result(f"✅ 已重置用户 {user_id} 的协议状态。")
         event.stop_event()
 
     @filter.command("doc_help")
