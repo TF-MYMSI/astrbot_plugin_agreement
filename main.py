@@ -6,7 +6,6 @@ import time
 import os
 import httpx
 import asyncio
-from typing import Optional
 
 
 @register(
@@ -18,6 +17,7 @@ from typing import Optional
 class AgreementPlugin(Star):
     """文档签订插件主类"""
 
+    # 状态常量
     STATE_NONE = None
     STATE_WAITING = "waiting"
     STATE_AGREED = "yes"
@@ -31,29 +31,30 @@ class AgreementPlugin(Star):
 
     # ==================== 配置加载 ====================
 
-def _load_config(self) -> None:
-    """加载所有配置"""
-    cfg = self.config
-    
-    self.admins = cfg.get("admins", [])
-    self.scope_private = cfg.get("scope_private", True)
-    self.scope_group = cfg.get("scope_group", False)
-    self.doc_name = cfg.get("doc_name", "用户协议")
-    self.doc_version = cfg.get("doc_version", "v1.0")
-    self.doc_updated = cfg.get("doc_updated", "2026-04-06")
-    self.doc_contact = cfg.get("doc_contact", "QQ群 752775661")
-    self.trigger_keywords = cfg.get("trigger_keywords", ["协议", "规则", "条例"])
-    self.cooldown_seconds = cfg.get("cooldown_seconds", 30)
-    self.delivery_text = cfg.get("delivery_text", True)
-    self.delivery_image = cfg.get("delivery_image", False)
-    self.image_url = cfg.get("image_url", "")
-    self.image_path = cfg.get("image_path", "")
-    self.reply_agree = cfg.get("reply_agree", "已记录你的同意。现在可以正常使用本机器人。")
-    self.reply_refuse = cfg.get("reply_refuse", "已记录你的拒绝。本机器人将无法为你服务。")
-    self.reply_waiting = cfg.get("reply_waiting", "请回复「同意」或「不同意」接受{name}。")
-    self.sections = cfg.get("doc_sections", [])
-    
-    self.doc_text = self._build_document() if self.delivery_text else ""
+    def _load_config(self) -> None:
+        """加载所有配置"""
+        cfg = self.config
+        
+        self.admins = cfg.get("admins", [])
+        self.scope_private = cfg.get("scope_private", True)
+        self.scope_group = cfg.get("scope_group", False)
+        self.doc_name = cfg.get("doc_name", "用户协议")
+        self.doc_version = cfg.get("doc_version", "v1.0")
+        self.doc_updated = cfg.get("doc_updated", "2026-04-06")
+        self.doc_contact = cfg.get("doc_contact", "QQ群 752775661")
+        self.trigger_keywords = cfg.get("trigger_keywords", ["协议", "规则", "条例"])
+        self.cooldown_seconds = cfg.get("cooldown_seconds", 30)
+        self.delivery_text = cfg.get("delivery_text", True)
+        self.delivery_image = cfg.get("delivery_image", False)
+        self.image_url = cfg.get("image_url", "")
+        self.image_path = cfg.get("image_path", "")
+        self.reply_agree = cfg.get("reply_agree", "已记录你的同意。现在可以正常使用本机器人。")
+        self.reply_refuse = cfg.get("reply_refuse", "已记录你的拒绝。本机器人将无法为你服务。")
+        self.reply_waiting = cfg.get("reply_waiting", "请回复「同意」或「不同意」接受{name}。")
+        self.sections = cfg.get("doc_sections", [])
+        
+        # 构建文字协议文本
+        self.doc_text = self._build_document() if self.delivery_text else ""
 
     def _build_document(self) -> str:
         """构建文字协议文本"""
@@ -85,6 +86,9 @@ def _load_config(self) -> None:
         
         logger.info(f"文档插件已加载 | 私聊: {self.scope_private} | 群聊: {self.scope_group}")
         logger.info(f"文档名称: {self.doc_name} | 发送方式: {'+'.join(delivery_modes) if delivery_modes else '无'}")
+        logger.info(f"触发词: {self.trigger_keywords} | 管理员: {self.admins if self.admins else '未设置'}")
+
+    # ==================== 工具方法 ====================
 
     def _format_reply(self, template: str) -> str:
         """格式化回复内容"""
@@ -119,6 +123,8 @@ def _load_config(self) -> None:
             return False
         return True
 
+    # ==================== 图片发送 ====================
+
     async def _send_image(self, event: AstrMessageEvent):
         """发送图片协议"""
         image_data = None
@@ -151,6 +157,8 @@ def _load_config(self) -> None:
                 yield r
         elif self.delivery_text:
             yield event.plain_result(self.doc_text)
+
+    # ==================== 统计方法 ====================
 
     async def _update_stat(self, stat_key: str, field: str, delta: int = 1) -> None:
         key = f"{stat_key}_{field}"
@@ -225,7 +233,7 @@ def _load_config(self) -> None:
             yield event.plain_result("处理消息时出现错误，请稍后再试。")
             event.stop_event()
 
-    # ==================== 命令（使用 @filter.command） ====================
+    # ==================== 管理员命令 ====================
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
@@ -239,62 +247,8 @@ def _load_config(self) -> None:
         waiting = total - agreed - refused
         rate = (agreed / total * 100) if total > 0 else 0
         
-        result = f"【{self.doc_name}签订统计】（{msg_type}）\n总用户数：{total}\n已同意：{agreed}\n已拒绝：{refused}\n等待中：{waiting}\n同意率：{rate:.1f}%"
+        result = f"【{self.doc_name}签订统计】（{msg_type}）\n━━━━━━━━━━━━━━━━━━━━\n总用户数：{total}\n已同意：{agreed}\n已拒绝：{refused}\n等待中：{waiting}\n同意率：{rate:.1f}%"
         yield event.plain_result(result)
-        event.stop_event()
-
-    @filter.command("doc_status")
-    async def cmd_status(self, event: AstrMessageEvent):
-        """查看个人文档签订状态"""
-        session = self._get_session_key(event)
-        status = await self.get_kv_data(session, None)
-        
-        status_map = {
-            None: "未签订",
-            self.STATE_WAITING: "待确认",
-            self.STATE_AGREED: "已同意",
-            self.STATE_REFUSED: "已拒绝"
-        }
-        
-        result = f"【{self.doc_name}状态】\n当前状态：{status_map.get(status, '未知')}"
-        
-        if status == self.STATE_AGREED:
-            agree_time = await self.get_kv_data(f"{session}_time", None)
-            if agree_time:
-                result += f"\n同意时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(agree_time))}"
-        
-        yield event.plain_result(result)
-        event.stop_event()
-
-    @filter.command("doc_help")
-    async def cmd_help(self, event: AstrMessageEvent):
-        """显示帮助信息"""
-        delivery_modes = []
-        if self.delivery_text:
-            delivery_modes.append("文字")
-        if self.delivery_image:
-            delivery_modes.append("图片")
-        
-        help_text = f"""【{self.doc_name}插件帮助】
-触发方式：发送「{'」、「'.join(self.trigger_keywords)}」
-发送方式：{' + '.join(delivery_modes) if delivery_modes else '未启用'}
-私聊：{'启用' if self.scope_private else '禁用'}
-群聊：{'启用' if self.scope_group else '禁用'}
-
-用户命令：
-/doc_stats  - 查看统计
-/doc_status - 查看个人状态
-/doc_help   - 帮助
-
-管理员命令：
-/doc_list   - 查看用户列表
-/doc_reset   - 重置统计
-/doc_reload  - 重载配置
-
-回复「同意」接受，回复「不同意」拒绝
-版本：{self.doc_version}"""
-        
-        yield event.plain_result(help_text)
         event.stop_event()
 
     @filter.command("doc_list")
@@ -324,10 +278,13 @@ def _load_config(self) -> None:
             elif status == self.STATE_WAITING:
                 waiting.append(uid)
         
-        result = f"【{self.doc_name}用户列表】（{msg_type}）\n\n"
-        result += f"已同意 ({len(agreed)}人)：{', '.join(agreed[:30]) if agreed else '无'}"
-        result += f"\n\n已拒绝 ({len(refused)}人)：{', '.join(refused[:30]) if refused else '无'}"
-        result += f"\n\n等待中 ({len(waiting)}人)：{', '.join(waiting[:30]) if waiting else '无'}"
+        max_display = 30
+        result = f"【{self.doc_name}用户列表】（{msg_type}）\n\n✅ 已同意 ({len(agreed)}人)：\n"
+        result += "、".join(agreed[:max_display]) if agreed else "无"
+        result += f"\n\n❌ 已拒绝 ({len(refused)}人)：\n"
+        result += "、".join(refused[:max_display]) if refused else "无"
+        result += f"\n\n⏳ 等待中 ({len(waiting)}人)：\n"
+        result += "、".join(waiting[:max_display]) if waiting else "无"
         
         yield event.plain_result(result)
         event.stop_event()
@@ -368,12 +325,77 @@ def _load_config(self) -> None:
             delivery_modes.append("图片")
         
         yield event.plain_result(
-            f"配置已重新加载。\n文档名称：{self.doc_name}\n"
+            f"配置已重新加载。\n"
+            f"文档名称：{self.doc_name}\n"
             f"发送方式：{'+'.join(delivery_modes) if delivery_modes else '无'}\n"
             f"触发词：{', '.join(self.trigger_keywords)}\n"
             f"私聊：{'启用' if self.scope_private else '禁用'}\n"
             f"群聊：{'启用' if self.scope_group else '禁用'}"
         )
+        event.stop_event()
+
+    @filter.command("doc_status")
+    async def cmd_status(self, event: AstrMessageEvent):
+        """查看个人文档签订状态"""
+        session = self._get_session_key(event)
+        status = await self.get_kv_data(session, None)
+        
+        status_map = {
+            None: "未签订",
+            self.STATE_WAITING: "待确认",
+            self.STATE_AGREED: "已同意",
+            self.STATE_REFUSED: "已拒绝"
+        }
+        
+        result = f"【{self.doc_name}状态】\n当前状态：{status_map.get(status, '未知')}"
+        
+        if status == self.STATE_AGREED:
+            agree_time = await self.get_kv_data(f"{session}_time", None)
+            if agree_time:
+                result += f"\n同意时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(agree_time))}"
+        
+        yield event.plain_result(result)
+        event.stop_event()
+
+    @filter.command("doc_help")
+    async def cmd_help(self, event: AstrMessageEvent):
+        """显示帮助信息"""
+        delivery_modes = []
+        if self.delivery_text:
+            delivery_modes.append("文字")
+        if self.delivery_image:
+            delivery_modes.append("图片")
+        
+        help_text = f"""【{self.doc_name}插件帮助】
+
+触发方式：
+发送包含「{'」、「'.join(self.trigger_keywords)}」的消息
+
+发送方式：{' + '.join(delivery_modes) if delivery_modes else '未启用'}
+
+当前状态：
+私聊：{'✅ 启用' if self.scope_private else '❌ 禁用'}
+群聊：{'✅ 启用' if self.scope_group else '❌ 禁用'}
+
+📊 用户命令：
+/doc_stats  - 查看统计
+/doc_status - 查看个人状态
+/doc_help   - 显示本帮助
+
+🔧 管理员命令：
+/doc_list   - 查看用户列表
+/doc_reset  - 重置统计
+/doc_reload - 重载配置
+
+💡 提示：
+回复「同意」接受文档，回复「不同意」拒绝
+图片协议需配置图片URL或本地路径
+配置可在 WebUI → 插件配置 中修改
+
+版本：{self.doc_version}
+更新：{self.doc_updated}"""
+        
+        yield event.plain_result(help_text)
         event.stop_event()
 
     async def terminate(self):
