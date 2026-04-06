@@ -10,7 +10,7 @@ import asyncio
 
 @register(
     "astrbot_plugin_agreement",
-    "星恒梦落",
+    "YHJM",
     "文档签订插件",
     "1.0.0"
 )
@@ -38,13 +38,10 @@ class AgreementPlugin(Star):
         self.doc_name = cfg.get("doc_name", "用户协议")
         self.doc_version = cfg.get("doc_version", "v1.0")
         self.doc_updated = cfg.get("doc_updated", "2026-04-06")
-        self.doc_contact = cfg.get("doc_contact", "QQ群 752775661")
+        self.doc_contact = cfg.get("doc_contact", "QQ群 000000000")
         self.trigger_keywords = cfg.get("trigger_keywords", ["协议", "规则", "条例"])
         self.cooldown_seconds = cfg.get("cooldown_seconds", 30)
         self.delivery_text = cfg.get("delivery_text", True)
-        self.delivery_image = cfg.get("delivery_image", False)
-        self.image_url = cfg.get("image_url", "")
-        self.image_path = cfg.get("image_path", "")
         self.reply_agree = cfg.get("reply_agree", "已记录你的同意。现在可以正常使用本机器人。")
         self.reply_refuse = cfg.get("reply_refuse", "已记录你的拒绝。本机器人将无法为你服务。")
         self.reply_waiting = cfg.get("reply_waiting", "请回复「同意」或「不同意」接受{name}。")
@@ -55,7 +52,7 @@ class AgreementPlugin(Star):
     def _build_document(self) -> str:
         """构建文字协议文本"""
         lines = [
-            f"星恒梦落{self.doc_name}",
+            f"{self.doc_name}",
             "",
             f"版本：{self.doc_version}",
             f"更新日期：{self.doc_updated}",
@@ -66,8 +63,6 @@ class AgreementPlugin(Star):
         for section in self.sections:
             title = section.get("title", "")
             content = section.get("content", "")
-            title = title.replace("协议", self.doc_name)
-            content = content.replace("本协议", f"本{self.doc_name}")
             lines.extend([title, content, ""])
         
         return "\n".join(lines).strip()
@@ -77,8 +72,6 @@ class AgreementPlugin(Star):
         delivery_modes = []
         if self.delivery_text:
             delivery_modes.append("文字")
-        if self.delivery_image:
-            delivery_modes.append("图片")
         
         logger.info(f"文档插件已加载 | 私聊: {self.scope_private} | 群聊: {self.scope_group}")
         logger.info(f"文档名称: {self.doc_name} | 发送方式: {'+'.join(delivery_modes) if delivery_modes else '无'}")
@@ -100,7 +93,6 @@ class AgreementPlugin(Star):
 
     def _get_session_key(self, event: AstrMessageEvent) -> str:
         """获取会话存储键"""
-        # 修复：临时会话的 group_id 是空字符串，按私聊处理
         group_id = event.get_group_id()
         is_private = group_id is None or group_id == ""
         if is_private:
@@ -114,41 +106,6 @@ class AgreementPlugin(Star):
         if is_private:
             return "doc_stat_private"
         return f"doc_stat_group_{group_id}"
-
-    # ==================== 图片发送 ====================
-
-    async def _send_image(self, event: AstrMessageEvent):
-        """发送图片协议"""
-        image_data = None
-        
-        if self.image_url and self.image_url.strip():
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.get(self.image_url)
-                    if response.status_code == 200:
-                        image_data = response.content
-            except Exception as e:
-                logger.error(f"加载网络图片失败: {e}")
-        
-        if image_data is None and self.image_path and os.path.exists(self.image_path):
-            try:
-                with open(self.image_path, "rb") as f:
-                    image_data = f.read()
-            except Exception as e:
-                logger.error(f"加载本地图片失败: {e}")
-        
-        if image_data:
-            yield event.reply([Image.from_bytes(image_data)])
-        elif self.delivery_text:
-            yield event.plain_result(self.doc_text)
-
-    async def _send_document(self, event: AstrMessageEvent):
-        """发送文档"""
-        if self.delivery_image:
-            async for r in self._send_image(event):
-                yield r
-        elif self.delivery_text:
-            yield event.plain_result(self.doc_text)
 
     # ==================== 统计方法 ====================
 
@@ -172,33 +129,22 @@ class AgreementPlugin(Star):
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，根据类型分发"""
-        # 调试日志
-        logger.info(f"[DEBUG] 收到消息: {event.message_str}")
-        logger.info(f"[DEBUG] get_message_type(): {event.get_message_type()}")
         group_id = event.get_group_id()
-        logger.info(f"[DEBUG] get_group_id(): '{group_id}'")
-        logger.info(f"[DEBUG] scope_private: {self.scope_private}, scope_group: {self.scope_group}")
-        
-        # 判断是否为群聊：群号存在且不为空字符串（修复临时会话问题）
         is_group = group_id is not None and group_id != ""
         
         if is_group:
-            logger.info(f"[DEBUG] 进入群聊分支")
-            # 群聊：检查开关
+            # 群聊分支
             if not self.scope_group:
-                logger.info(f"[DEBUG] 群聊开关关闭，退出")
                 return
             
-            # 检查是否被 @（兼容不同版本）
+            # 检查是否被 @
             is_at_me = False
             try:
                 is_at_me = event.is_at_me()
             except AttributeError:
-                # 如果 is_at_me 不存在，手动检查消息链
                 bot_qq = str(event.get_self_id())
                 for segment in event.get_messages():
                     if segment.type == "At":
-                        # 兼容不同的属性访问方式
                         qq = getattr(segment, 'qq', None) or getattr(segment, 'target', None) or str(segment)
                         if str(qq) == bot_qq:
                             is_at_me = True
@@ -207,27 +153,22 @@ class AgreementPlugin(Star):
                     is_at_me = True
             
             if not is_at_me:
-                logger.info(f"[DEBUG] 没有被 @，退出")
                 return
-            logger.info(f"[DEBUG] 群聊开关开启且被 @，继续处理")
             
-            if not self.delivery_text and not self.delivery_image:
-                logger.info(f"[DEBUG] 文字和图片协议都未启用，退出")
+            if not self.delivery_text:
                 return
             
             session = self._get_session_key(event)
             stat_key = self._get_stat_key(event)
             status = await self.get_kv_data(session, None)
-            logger.info(f"[DEBUG] 群聊用户状态: {status}")
             
             try:
                 if status is None:
-                    logger.info(f"[DEBUG] 群用户 {event.get_sender_id()} 未签订，发送协议")
+                    logger.info(f"群用户 {event.get_sender_id()} 未签订，发送协议")
                     await self.put_kv_data(session, self.STATE_WAITING)
                     await self.put_kv_data(f"{session}_last", time.time())
                     await self._add_to_user_list(stat_key, event.get_sender_id())
-                    async for r in self._send_document(event):
-                        yield r
+                    yield event.plain_result(self.doc_text)
                     event.stop_event()
                     return
                 
@@ -248,13 +189,23 @@ class AgreementPlugin(Star):
                         yield event.plain_result(self._format_reply(self.reply_refuse))
                         event.stop_event()
                     else:
-                        logger.info(f"群用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
-                        async for r in self._send_document(event):
-                            yield r
+                        last_sent = await self.get_kv_data(f"{session}_last", 0)
+                        if time.time() - last_sent < self.cooldown_seconds:
+                            yield event.plain_result(self._format_reply(self.reply_waiting))
+                        else:
+                            await self.put_kv_data(f"{session}_last", time.time())
+                            yield event.plain_result(self.doc_text)
                         event.stop_event()
                     return
                 
                 if status == self.STATE_REFUSED:
+                    # 已拒绝用户：检查是否重新触发
+                    if self._contains_keyword(event.message_str):
+                        logger.info(f"群用户 {event.get_sender_id()} 重新触发，重置状态")
+                        await self.put_kv_data(session, None)
+                        await self.put_kv_data(session, self.STATE_WAITING)
+                        await self.put_kv_data(f"{session}_last", time.time())
+                        yield event.plain_result(self.doc_text)
                     event.stop_event()
                     return
                 
@@ -267,30 +218,24 @@ class AgreementPlugin(Star):
                 event.stop_event()
         
         else:
-            # 私聊分支保持不变
-            logger.info(f"[DEBUG] 进入私聊分支")
-            # 私聊：检查开关
+            # 私聊分支
             if not self.scope_private:
-                logger.info(f"[DEBUG] 私聊开关关闭，退出")
                 return
             
-            if not self.delivery_text and not self.delivery_image:
-                logger.info(f"[DEBUG] 文字和图片协议都未启用，退出")
+            if not self.delivery_text:
                 return
             
             session = self._get_session_key(event)
             stat_key = self._get_stat_key(event)
             status = await self.get_kv_data(session, None)
-            logger.info(f"[DEBUG] 私聊用户状态: {status}")
             
             try:
                 if status is None:
-                    logger.info(f"[DEBUG] 用户 {event.get_sender_id()} 未签订，发送协议")
+                    logger.info(f"用户 {event.get_sender_id()} 未签订，发送协议")
                     await self.put_kv_data(session, self.STATE_WAITING)
                     await self.put_kv_data(f"{session}_last", time.time())
                     await self._add_to_user_list(stat_key, event.get_sender_id())
-                    async for r in self._send_document(event):
-                        yield r
+                    yield event.plain_result(self.doc_text)
                     event.stop_event()
                     return
                 
@@ -311,13 +256,23 @@ class AgreementPlugin(Star):
                         yield event.plain_result(self._format_reply(self.reply_refuse))
                         event.stop_event()
                     else:
-                        logger.info(f"用户 {event.get_sender_id()} 状态为waiting，重新发送协议")
-                        async for r in self._send_document(event):
-                            yield r
+                        last_sent = await self.get_kv_data(f"{session}_last", 0)
+                        if time.time() - last_sent < self.cooldown_seconds:
+                            yield event.plain_result(self._format_reply(self.reply_waiting))
+                        else:
+                            await self.put_kv_data(f"{session}_last", time.time())
+                            yield event.plain_result(self.doc_text)
                         event.stop_event()
                     return
                 
                 if status == self.STATE_REFUSED:
+                    # 已拒绝用户：检查是否重新触发
+                    if self._contains_keyword(event.message_str):
+                        logger.info(f"用户 {event.get_sender_id()} 重新触发，重置状态")
+                        await self.put_kv_data(session, None)
+                        await self.put_kv_data(session, self.STATE_WAITING)
+                        await self.put_kv_data(f"{session}_last", time.time())
+                        yield event.plain_result(self.doc_text)
                     event.stop_event()
                     return
                 
@@ -417,8 +372,6 @@ class AgreementPlugin(Star):
         delivery_modes = []
         if self.delivery_text:
             delivery_modes.append("文字")
-        if self.delivery_image:
-            delivery_modes.append("图片")
         
         yield event.plain_result(
             f"配置已重新加载。\n"
@@ -453,14 +406,49 @@ class AgreementPlugin(Star):
         yield event.plain_result(result)
         event.stop_event()
 
+    @filter.command("doc_undo")
+    async def cmd_undo(self, event: AstrMessageEvent):
+        """反悔：重新签订协议（用户主动重置自己的状态）"""
+        session = self._get_session_key(event)
+        status = await self.get_kv_data(session, None)
+        
+        if status == self.STATE_REFUSED:
+            await self.put_kv_data(session, None)
+            yield event.plain_result(f"已重置你的协议状态。请重新发送「{self.trigger_keywords[0]}」开始签订。")
+        elif status == self.STATE_AGREED:
+            await self.put_kv_data(session, None)
+            yield event.plain_result(f"已撤销你的同意。请重新发送「{self.trigger_keywords[0]}」开始签订。")
+        elif status == self.STATE_WAITING:
+            await self.put_kv_data(session, None)
+            yield event.plain_result(f"已取消当前协议签订流程。请重新发送「{self.trigger_keywords[0]}」开始。")
+        else:
+            yield event.plain_result("你还没有签订过协议，无需反悔。")
+        event.stop_event()
+
+    @filter.command("doc_reset_user")
+    async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
+        """管理员：重置指定用户的协议状态"""
+        if not self._is_admin(event.get_sender_id()):
+            yield event.plain_result("只有管理员可以使用此命令。")
+            event.stop_event()
+            return
+        
+        if not user_id:
+            yield event.plain_result("用法：/doc_reset_user 用户QQ号")
+            event.stop_event()
+            return
+        
+        session = f"doc_agree_{user_id}"
+        await self.put_kv_data(session, None)
+        yield event.plain_result(f"已重置用户 {user_id} 的协议状态。")
+        event.stop_event()
+
     @filter.command("doc_help")
     async def cmd_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
         delivery_modes = []
         if self.delivery_text:
             delivery_modes.append("文字")
-        if self.delivery_image:
-            delivery_modes.append("图片")
         
         help_text = f"""【{self.doc_name}插件帮助】
 
@@ -477,16 +465,18 @@ class AgreementPlugin(Star):
 📊 用户命令：
 /doc_stats  - 查看统计
 /doc_status - 查看个人状态
+/doc_undo   - 反悔，重新签订协议
 /doc_help   - 显示本帮助
 
 🔧 管理员命令：
 /doc_list   - 查看用户列表
 /doc_reset  - 重置统计
+/doc_reset_user 用户QQ号 - 重置指定用户状态
 /doc_reload - 重载配置
 
 💡 提示：
 回复「同意」接受文档，回复「不同意」拒绝
-图片协议需配置图片URL或本地路径
+如果反悔了，发送 /doc_undo 可重新签订
 配置可在 WebUI → 插件配置 中修改
 
 版本：{self.doc_version}
