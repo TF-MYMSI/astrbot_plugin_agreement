@@ -7,15 +7,10 @@ import os
 import httpx
 import asyncio
 
-# 兼容不同版本的常量定义
-try:
-    from astrbot.api.event import EventMessageType
-    PRIVATE = EventMessageType.PRIVATE_MESSAGE
-    GROUP = EventMessageType.GROUP_MESSAGE
-except ImportError:
-    # 使用字符串作为备选
-    PRIVATE = "private"
-    GROUP = "group"
+
+# 定义消息类型常量（根据你版本的实际情况）
+MSG_TYPE_PRIVATE = 1  # 私聊
+MSG_TYPE_GROUP = 2    # 群聊
 
 
 @register(
@@ -174,7 +169,7 @@ class AgreementPlugin(Star):
 
     # ==================== 私聊消息处理 ====================
     
-    @filter.event_message_type(PRIVATE)
+    @filter.event_message_type(MSG_TYPE_PRIVATE)
     @filter.regex(r".*")
     async def on_private_message(self, event: AstrMessageEvent):
         """处理所有私聊消息"""
@@ -236,7 +231,7 @@ class AgreementPlugin(Star):
 
     # ==================== 群聊消息处理 ====================
     
-    @filter.event_message_type(GROUP)
+    @filter.event_message_type(MSG_TYPE_GROUP)
     @filter.regex(r".*")
     async def on_group_message(self, event: AstrMessageEvent):
         """处理所有群聊消息"""
