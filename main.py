@@ -1,6 +1,5 @@
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api.event import EventMessageType
 from astrbot.api.message_components import Image, Plain
 from astrbot.api import logger, AstrBotConfig
 import time
@@ -12,7 +11,7 @@ import asyncio
 @register(
     "astrbot_plugin_agreement",
     "星恒梦落",
-    "文档签订插件，首次触发关键词时发送文档（文字/图片），记录用户同意/拒绝状态",
+    "文档签订插件",
     "1.0.0"
 )
 class AgreementPlugin(Star):
@@ -174,8 +173,8 @@ class AgreementPlugin(Star):
 
     # ==================== 消息处理 ====================
 
-    @filter.event_message_type(filter.EventMessageType.ALL)
-    async def on_all_message(self, event: AstrMessageEvent):
+    # 不需要任何装饰器！AstrBot 会自动调用 on_message 方法
+    async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，实现状态机"""
         if not self._should_process(event):
             return
