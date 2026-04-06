@@ -18,20 +18,21 @@ from typing import Optional
 class AgreementPlugin(Star):
     """文档签订插件主类"""
 
-    # 状态常量
     STATE_NONE = None
     STATE_WAITING = "waiting"
     STATE_AGREED = "yes"
     STATE_REFUSED = "no"
 
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
+        self.config = config or {}
         self._load_config()
         self._log_config()
 
     # ==================== 配置加载 ====================
 
 def _load_config(self) -> None:
+    """加载所有配置"""
     cfg = self.config
     
     self.admins = cfg.get("admins", [])
