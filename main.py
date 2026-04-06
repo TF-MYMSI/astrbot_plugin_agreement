@@ -17,23 +17,21 @@ import asyncio
 class AgreementPlugin(Star):
     """文档签订插件主类"""
 
-    # 状态常量
     STATE_NONE = None
     STATE_WAITING = "waiting"
     STATE_AGREED = "yes"
     STATE_REFUSED = "no"
 
-    def __init__(self, context: Context, config: dict = None):
+    def __init__(self, context: Context):
         super().__init__(context)
-        self.config = config or {}
+        # 通过 context 获取配置
         self._load_config()
         self._log_config()
 
-    # ==================== 配置加载 ====================
-
     def _load_config(self) -> None:
         """加载所有配置"""
-        cfg = self.config
+        # 通过 self.get_context().config 获取配置
+        cfg = self.get_context().config
         
         self.admins = cfg.get("admins", [])
         self.scope_private = cfg.get("scope_private", True)
@@ -53,7 +51,6 @@ class AgreementPlugin(Star):
         self.reply_waiting = cfg.get("reply_waiting", "请回复「同意」或「不同意」接受{name}。")
         self.sections = cfg.get("doc_sections", [])
         
-        # 构建文字协议文本
         self.doc_text = self._build_document() if self.delivery_text else ""
 
     def _build_document(self) -> str:
