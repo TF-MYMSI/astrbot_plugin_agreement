@@ -1,17 +1,17 @@
 {
   "admins": {
-    "type": "array",
+    "type": "list",
     "description": "拥有管理权限的QQ号列表",
     "items": { "type": "string" },
     "default": []
   },
   "scope_private": {
-    "type": "boolean",
+    "type": "bool",
     "description": "是否在私聊中启用插件",
     "default": true
   },
   "scope_group": {
-    "type": "boolean",
+    "type": "bool",
     "description": "是否在群聊中启用插件",
     "default": false
   },
@@ -36,7 +36,7 @@
     "default": "QQ群 752775661"
   },
   "trigger_keywords": {
-    "type": "array",
+    "type": "list",
     "description": "触发发送文档的关键词列表",
     "items": { "type": "string" },
     "default": ["协议", "规则", "条例"]
@@ -47,12 +47,12 @@
     "default": 30
   },
   "delivery_text": {
-    "type": "boolean",
+    "type": "bool",
     "description": "是否发送文字版文档",
     "default": true
   },
   "delivery_image": {
-    "type": "boolean",
+    "type": "bool",
     "description": "是否发送图片版文档",
     "default": false
   },
