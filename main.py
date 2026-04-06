@@ -172,8 +172,8 @@ class AgreementPlugin(Star):
             await self._update_stat(stat_key, "total")
 
     # ==================== 消息处理 ====================
-
-    # 不需要任何装饰器！AstrBot 会自动调用 on_message 方法
+    
+    @filter.regex(r".*")  # 匹配所有消息
     async def on_message(self, event: AstrMessageEvent):
         """监听所有消息，实现状态机"""
         if not self._should_process(event):
