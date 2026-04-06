@@ -1,4 +1,4 @@
-from astrbot.api.event import filter, AstrMessageEvent, EventMessageType
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api.message_components import Image, Plain
 from astrbot.api import logger, AstrBotConfig
@@ -173,7 +173,7 @@ class AgreementPlugin(Star):
 
     # ==================== 消息处理 ====================
 
-    @filter.event_message_type(EventMessageType.ALL)
+    @filter.event_message_type(“all”)
     async def on_all_message(self, event: AstrMessageEvent):
         """监听所有消息，实现状态机"""
         if not self._should_process(event):
