@@ -1,11 +1,12 @@
 from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star, register  # ✅ 必须有 register
+from astrbot.api.star import Context, Star, register
 from astrbot.api.message_components import Image, Plain
-from astrbot.api import logger
+from astrbot.api import logger, AstrBotConfig
 import time
 import os
 import httpx
 import asyncio
+
 
 @register(
     "astrbot_plugin_agreement",
@@ -21,14 +22,15 @@ class AgreementPlugin(Star):
     STATE_AGREED = "yes"
     STATE_REFUSED = "no"
 
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
+        self.config = config
         self._load_config()
         self._log_config()
 
     def _load_config(self) -> None:
         """加载所有配置"""
-        cfg = self.context.config
+        cfg = self.config
         
         self.admins = cfg.get("admins", [])
         self.scope_private = cfg.get("scope_private", True)
