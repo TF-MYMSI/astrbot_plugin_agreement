@@ -1,0 +1,131 @@
+{
+  "type": "object",
+  "properties": {
+    "admins": {
+      "type": "array",
+      "title": "管理员列表",
+      "description": "拥有管理权限的QQ号列表",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "scope": {
+      "type": "object",
+      "title": "生效范围",
+      "properties": {
+        "private": { "type": "boolean", "title": "私聊", "default": true },
+        "group": { "type": "boolean", "title": "群聊", "default": false }
+      }
+    },
+    "document": {
+      "type": "object",
+      "title": "文档设置",
+      "properties": {
+        "name": { "type": "string", "title": "文档名称", "default": "用户协议" },
+        "version": { "type": "string", "title": "版本号", "default": "v1.0" },
+        "updated": { "type": "string", "title": "更新日期", "format": "date", "default": "2026-04-06" },
+        "contact": { "type": "string", "title": "联系方式", "default": "QQ群 752775661" }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "title": "触发设置",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "title": "触发关键词",
+          "items": { "type": "string" },
+          "default": ["协议", "规则", "条例"]
+        },
+        "cooldown": {
+          "type": "integer",
+          "title": "冷却时间（秒）",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "title": "发送方式",
+      "properties": {
+        "text": {
+          "type": "boolean",
+          "title": "发送文字协议",
+          "description": "是否发送文字版协议",
+          "default": true
+        },
+        "image": {
+          "type": "boolean",
+          "title": "发送图片协议",
+          "description": "是否发送图片版协议",
+          "default": false
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "title": "图片协议设置",
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "图片URL",
+          "description": "协议图片的网络地址（支持 http/https）",
+          "default": ""
+        },
+        "path": {
+          "type": "string",
+          "title": "本地路径",
+          "description": "协议图片的本地路径（如 /root/data/protocol.png）",
+          "default": ""
+        }
+      }
+    },
+    "replies": {
+      "type": "object",
+      "title": "回复内容",
+      "properties": {
+        "agree": {
+          "type": "string",
+          "title": "同意回复",
+          "description": "支持变量：{name}",
+          "default": "已记录你的同意。现在可以正常使用本机器人。",
+          "format": "textarea"
+        },
+        "refuse": {
+          "type": "string",
+          "title": "拒绝回复",
+          "description": "支持变量：{name}",
+          "default": "已记录你的拒绝。本机器人将无法为你服务。",
+          "format": "textarea"
+        },
+        "waiting": {
+          "type": "string",
+          "title": "等待回复",
+          "description": "支持变量：{name}",
+          "default": "请回复「同意」或「不同意」接受{name}。",
+          "format": "textarea"
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "title": "文字协议章节",
+      "description": "仅在「发送文字协议」启用时生效",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "title": "标题" },
+          "content": { "type": "string", "title": "内容", "format": "textarea" }
+        }
+      },
+      "default": [
+        { "title": "一、协议范围", "content": "本协议适用于：QQ群聊、QQ私聊、任何通过本机器人进行的消息发送、工具调用等行为。" },
+        { "title": "二、信息收集与使用", "content": "我们会收集以下信息：用户QQ号、聊天内容、协议状态。我们承诺不向第三方提供你的个人信息。" },
+        { "title": "三、用户行为规范", "content": "禁止：违法活动；发布诈骗、赌博、色情、暴力等信息；恶意刷屏、攻击机器人。" },
+        { "title": "四、免责声明", "content": "本机器人不保证服务完全不中断。用户违法操作后果自负。" },
+        { "title": "五、确认方式", "content": "回复「同意」视为同意本协议。回复「不同意」将无法使用本机器人。" }
+      ]
+    }
+  }
+}

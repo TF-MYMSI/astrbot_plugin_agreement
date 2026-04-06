@@ -1,0 +1,7 @@
+name: astrbot_plugin_agreement
+desc: 用户协议/规则签订插件，首次触发关键词时发送文档，记录同意/拒绝的用户
+author: YHJM
+version: 1.0.0
+display_name: 文档签订插件
+support_platforms:
+  - aiocqhttp
