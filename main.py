@@ -134,13 +134,18 @@ class AgreementPlugin(Star):
     
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
-        """监听所有消息，根据类型分发"""
+        """只处理非命令的普通消息（协议签订流程）"""
         msg = event.message_str
         group_id = event.get_group_id()
         is_group = group_id is not None and group_id != ""
         
-        # 【重要】不要在这里拦截命令！让 @filter.command 去处理
-        # 只处理非命令的普通消息
+        # 【关键】如果是命令，直接返回，让 @filter.command 处理
+        try:
+            if event.is_command():
+                return
+        except AttributeError:
+            if msg.startswith("/") or msg.startswith("#"):
+                return
         
         if is_group:
             # ========== 群聊分支 ==========
@@ -283,14 +288,11 @@ class AgreementPlugin(Star):
                 event.stop_event()
 
     # ==================== 命令 ====================
-    # 【核心】所有命令都在这里做拒绝状态检查，doc_undo 除外
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
         """查看文档签订统计"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         stat_key = self._get_stat_key(event)
@@ -309,9 +311,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_list")
     async def cmd_list(self, event: AstrMessageEvent):
         """查看用户列表（仅管理员）"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -352,9 +352,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset")
     async def cmd_reset(self, event: AstrMessageEvent):
         """重置统计数据（仅管理员）"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -376,9 +374,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_reload")
     async def cmd_reload(self, event: AstrMessageEvent):
         """重新加载配置（仅管理员）"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -405,9 +401,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_status")
     async def cmd_status(self, event: AstrMessageEvent):
         """查看个人文档签订状态"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         session = self._get_session_key(event)
@@ -453,9 +447,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset_user")
     async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
         """管理员：重置指定用户的协议状态"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         if not self._is_admin(event.get_sender_id()):
@@ -468,7 +460,6 @@ class AgreementPlugin(Star):
             event.stop_event()
             return
         
-        # 支持群聊和私聊的session格式
         group_id = event.get_group_id()
         if group_id and group_id != "":
             session = f"doc_agree_{group_id}_{user_id}"
@@ -481,9 +472,7 @@ class AgreementPlugin(Star):
     @filter.command("doc_help")
     async def cmd_help(self, event: AstrMessageEvent):
         """显示帮助信息"""
-        # 拒绝状态下不执行
         if await self._is_rejected(event):
-            event.stop_event()
             return
         
         delivery_modes = []
