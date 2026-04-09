@@ -85,5 +85,10 @@
     "反悔冷却时间": {
         "type": "int",
         "default": 86400
+    },
+    "bot_qq": {
+        "type": "string",
+        "description": "机器人QQ号（用于检测@，留空则自动检测）",
+        "default": ""
     }
 }
