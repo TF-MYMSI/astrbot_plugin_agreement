@@ -13,83 +13,88 @@ class PluginConfig:
     # ==================== 基础配置 ====================
     @property
     def admins(self) -> List[str]:
-        return self._cfg.get("admins", [])
+        return self._cfg.get("管理员列表", [])
 
     @property
     def scope_private(self) -> bool:
-        return self._cfg.get("scope_private", True)
+        return self._cfg.get("启用私聊", True)
 
     @property
     def scope_group(self) -> bool:
-        return self._cfg.get("scope_group", False)
+        return self._cfg.get("启用群聊", False)
 
     # ==================== 文档配置 ====================
     @property
     def doc_name(self) -> str:
-        return self._cfg.get("doc_name", "用户协议")
+        return self._cfg.get("文档名称", "用户协议")
 
     @property
     def doc_version(self) -> str:
-        return self._cfg.get("doc_version", "v1.0")
+        return self._cfg.get("文档版本", "v1.0")
 
     @property
     def doc_updated(self) -> str:
-        return self._cfg.get("doc_updated", "2026-04-09")
+        return self._cfg.get("更新日期", "2026-04-09")
 
     @property
     def doc_contact(self) -> str:
-        return self._cfg.get("doc_contact", "QQ群 000000000")
+        return self._cfg.get("联系方式", "QQ群 000000000")
 
     @property
     def sections(self) -> List[Dict[str, str]]:
-        return self._cfg.get("doc_sections", [])
+        sections = self._cfg.get("文档章节", [])
+        # 转换中文键名为英文（供内部使用）
+        return [
+            {"title": s.get("标题", ""), "content": s.get("内容", "")}
+            for s in sections
+        ]
 
     # ==================== 触发配置 ====================
     @property
     def trigger_keywords(self) -> List[str]:
-        return self._cfg.get("trigger_keywords", ["协议", "规则", "条例"])
+        return self._cfg.get("触发关键词", ["协议", "规则", "条例"])
 
     @property
     def agree_keywords(self) -> List[str]:
-        return self._cfg.get("agree_keywords", ["同意", "agree", "YES", "是", "接受"])
+        return self._cfg.get("同意关键词", ["同意", "agree", "YES", "是", "接受"])
 
     @property
     def refuse_keywords(self) -> List[str]:
-        return self._cfg.get("refuse_keywords", ["不同意", "disagree", "NO", "否", "拒绝"])
+        return self._cfg.get("拒绝关键词", ["不同意", "disagree", "NO", "否", "拒绝"])
 
     @property
     def cooldown_seconds(self) -> int:
-        return self._cfg.get("cooldown_seconds", 30)
+        return self._cfg.get("冷却时间", 30)
 
     @property
     def delivery_text(self) -> bool:
-        return self._cfg.get("delivery_text", True)
+        return self._cfg.get("发送文字协议", True)
 
     # ==================== 回复配置 ====================
     @property
     def reply_agree(self) -> str:
-        return self._cfg.get("reply_agree", "✅ 已记录你的同意。现在可以正常使用本机器人。")
+        return self._cfg.get("同意后回复", "✅ 已记录你的同意。现在可以正常使用本机器人。")
 
     @property
     def reply_refuse(self) -> str:
-        return self._cfg.get("reply_refuse", "❌ 已记录你的拒绝。本机器人将无法为你服务。")
+        return self._cfg.get("拒绝后回复", "❌ 已记录你的拒绝。本机器人将无法为你服务。")
 
     @property
     def reply_waiting(self) -> str:
-        return self._cfg.get("reply_waiting", "📝 请回复「同意」或「不同意」接受{name}。")
+        return self._cfg.get("等待时回复", "📝 请回复「同意」或「不同意」接受{name}。")
 
     # ==================== 反悔配置 ====================
     @property
     def allow_undo(self) -> bool:
-        return self._cfg.get("allow_undo", True)
+        return self._cfg.get("允许反悔", True)
 
     @property
     def max_undo(self) -> int:
-        return self._cfg.get("max_undo", 3)
+        return self._cfg.get("最大反悔次数", 3)
 
     @property
     def undo_cooldown(self) -> int:
-        return self._cfg.get("undo_cooldown", 86400)
+        return self._cfg.get("反悔冷却时间", 86400)
 
     # ==================== 辅助方法 ====================
     def format_reply(self, template: str) -> str:
