@@ -1,35 +1,31 @@
 """协议签订流程处理"""
 
 import time
-import re
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
 from ..core import (
     PluginConfig, AgreementState, AgreementStorage,
     is_at_me, extract_group_id, extract_user_id,
-    match_keyword, is_admin
+    match_keyword
 )
 
 
 class MessageHandler:
-    """协议签订消息处理器（不处理命令）"""
+    """协议签订消息处理器"""
 
     def __init__(self, config: PluginConfig, storage: AgreementStorage, bot_qq: str):
         self.config = config
         self.storage = storage
         self.bot_qq = bot_qq
+        logger.info(f"MessageHandler 初始化完成, bot_qq={bot_qq}")
 
     def _remove_at_mention(self, msg: str) -> str:
         """移除消息中的@机器人部分"""
         if not self.bot_qq:
             return msg
-        
-        # 移除 @qq 格式
         msg = msg.replace(f"@{self.bot_qq}", "")
-        # 移除 CQ码格式
         msg = msg.replace(f"[CQ:at,qq={self.bot_qq}]", "")
-        # 移除可能的多余空格
         while "  " in msg:
             msg = msg.replace("  ", " ")
         return msg.strip()
@@ -41,47 +37,59 @@ class MessageHandler:
         user_id = extract_user_id(event)
         is_group = group_id is not None
         
+        # ===== 调试日志1：进入函数 =====
+        logger.info(f"[DEBUG1] 进入 handle, 原始消息='{original_msg}', 群聊={is_group}, 用户={user_id}, 群ID={group_id}")
+        
         # ========== 群聊处理 ==========
         if is_group:
-            # 群聊未启用，直接返回
+            logger.info(f"[DEBUG2] 群聊分支, scope_group={self.config.scope_group}")
             if not self.config.scope_group:
+                logger.info(f"[DEBUG3] 群聊未启用，直接返回")
                 return
             
-            # 必须@机器人才能触发
-            if not is_at_me(event, self.bot_qq):
+            logger.info(f"[DEBUG4] 检查@, bot_qq={self.bot_qq}")
+            at_result = is_at_me(event, self.bot_qq)
+            logger.info(f"[DEBUG5] is_at_me 返回结果: {at_result}")
+            if not at_result:
+                logger.info(f"[DEBUG6] 未@机器人，直接返回")
                 return
             
-            # 移除@部分，获取实际消息内容（仅用于日志）
             msg = self._remove_at_mention(original_msg)
-            logger.info(f"群聊消息(已移除@): '{msg}'")
+            logger.info(f"[DEBUG7] 移除@后消息: '{msg}'")
         
         # ========== 私聊处理 ==========
         else:
+            logger.info(f"[DEBUG8] 私聊分支, scope_private={self.config.scope_private}")
             if not self.config.scope_private:
+                logger.info(f"[DEBUG9] 私聊未启用，直接返回")
                 return
             msg = original_msg
-            logger.info(f"私聊消息: '{msg}'")
+            logger.info(f"[DEBUG10] 私聊消息: '{msg}'")
         
-        # 获取用户状态
+        # ========== 获取用户状态 ==========
+        logger.info(f"[DEBUG11] 准备获取用户状态, user_id={user_id}, group_id={group_id}")
         status = await self.storage.get_state(user_id, group_id)
-        logger.info(f"用户 {user_id} 当前状态: {status}")
+        logger.info(f"[DEBUG12] 用户状态: {status}")
         
         # ========== 状态: None (未签订) ==========
-        # 用户发送任何消息都触发协议发送（群聊需要@，私聊任意）
         if status is None:
-            logger.info(f"用户 {user_id} 未签订，发送协议")
+            logger.info(f"[DEBUG13] 用户未签订，准备发送协议")
             await self.storage.set_state(user_id, AgreementState.WAITING, group_id)
             await self.storage.set_user_data(user_id, "last", time.time(), group_id)
             await self.storage.add_to_user_list(user_id, group_id)
+            logger.info(f"[DEBUG14] 状态已更新为 WAITING，准备发送协议内容")
             yield event.plain_result(self.config.build_document())
             event.stop_event()
+            logger.info(f"[DEBUG15] 协议已发送")
             return
         
         # ========== 状态: WAITING (等待确认) ==========
         if status == AgreementState.WAITING:
-            # 先检查拒绝
+            logger.info(f"[DEBUG16] 用户等待确认中，消息='{msg}'")
+            
+            # 检查拒绝
             if match_keyword(msg, self.config.refuse_keywords):
-                logger.info(f"用户 {user_id} 拒绝文档")
+                logger.info(f"[DEBUG17] 匹配到拒绝关键词")
                 await self.storage.set_state(user_id, AgreementState.REFUSED, group_id)
                 await self.storage.set_user_data(user_id, "time", time.time(), group_id)
                 await self.storage.update_stat("refused", 1, group_id)
@@ -91,9 +99,9 @@ class MessageHandler:
                 event.stop_event()
                 return
             
-            # 再检查同意
+            # 检查同意
             if match_keyword(msg, self.config.agree_keywords):
-                logger.info(f"用户 {user_id} 同意文档")
+                logger.info(f"[DEBUG18] 匹配到同意关键词")
                 await self.storage.set_state(user_id, AgreementState.AGREED, group_id)
                 await self.storage.set_user_data(user_id, "time", time.time(), group_id)
                 await self.storage.update_stat("agreed", 1, group_id)
@@ -103,17 +111,18 @@ class MessageHandler:
                 event.stop_event()
                 return
             
-            # 不是同意也不是拒绝：检查冷却，重复发送协议
+            # 其他回复：检查冷却
+            logger.info(f"[DEBUG19] 未匹配到同意或拒绝，检查冷却")
             last_sent = await self.storage.get_user_data(user_id, "last", 0, group_id)
+            logger.info(f"[DEBUG20] 上次发送时间: {last_sent}, 当前时间: {time.time()}, 冷却时间: {self.config.cooldown_seconds}")
             if time.time() - last_sent < self.config.cooldown_seconds:
-                # 冷却期内，只提示等待
+                logger.info(f"[DEBUG21] 冷却期内，发送等待提示")
                 reply = self.config.format_reply(self.config.reply_waiting)
                 if reply:
-                    # 替换变量 {name}
                     reply = reply.replace("{name}", self.config.doc_name)
                     yield event.plain_result(reply)
             else:
-                # 冷却期过，重新发送协议
+                logger.info(f"[DEBUG22] 冷却期过，重新发送协议")
                 await self.storage.set_user_data(user_id, "last", time.time(), group_id)
                 yield event.plain_result(self.config.build_document())
             event.stop_event()
@@ -121,14 +130,13 @@ class MessageHandler:
         
         # ========== 状态: AGREED (已同意) ==========
         if status == AgreementState.AGREED:
-            # 正常放行，不回复，让消息继续传递给其他插件
-            logger.info(f"用户 {user_id} 已同意，放行消息")
+            logger.info(f"[DEBUG23] 用户已同意，放行消息（不回复）")
             return
         
         # ========== 状态: REFUSED (已拒绝) ==========
         if status == AgreementState.REFUSED:
-            # 完全静默，不回复任何消息
-            # 命令已经被 CommandHandler 处理了，这里只处理普通消息
-            logger.info(f"用户 {user_id} 已拒绝，静默")
+            logger.info(f"[DEBUG24] 用户已拒绝，静默")
             event.stop_event()
             return
+        
+        logger.info(f"[DEBUG25] 未知状态: {status}")
