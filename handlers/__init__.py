@@ -1,6 +1,4 @@
-"""处理器模块"""
-
+# handlers/__init__.py
 from .message_handler import MessageHandler
-from .command_handler import CommandHandler
 
-__all__ = ["MessageHandler", "CommandHandler"]
+__all__ = ['MessageHandler']
