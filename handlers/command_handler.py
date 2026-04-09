@@ -1,10 +1,9 @@
-"""命令处理"""
+"""命令处理 - 不使用 yield，直接发送消息"""
 
 import time
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
-# 修改这里：使用 .. 表示上一级目录
 from ..core import (
     PluginConfig, AgreementState, AgreementStorage,
     is_admin, extract_user_id, extract_group_id, is_private_chat
@@ -24,6 +23,11 @@ class CommandHandler:
             return False
         status = await self.storage.get_state(user_id, group_id)
         return status == AgreementState.REFUSED
+
+    async def _send_message(self, event: AstrMessageEvent, message: str):
+        """发送消息并停止事件"""
+        yield event.plain_result(message)
+        event.stop_event()
 
     # ==================== 用户命令 ====================
 
@@ -251,5 +255,7 @@ class CommandHandler:
             event.stop_event()
             return
 
-        yield event.plain_result("配置重载功能需要在 main.py 中实现。")
+        # 重新加载配置
+        self.config._cfg.reload()
+        yield event.plain_result("✅ 配置已重新加载。")
         event.stop_event()
