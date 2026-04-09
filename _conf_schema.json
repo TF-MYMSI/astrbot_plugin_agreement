@@ -1,42 +1,108 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-        "trigger_word": {
-            "type": "string",
-            "description": "触发词",
-            "default": "/agreement"
+    "admins": {
+        "type": "list",
+        "items": {"type": "string"},
+        "default": [],
+        "description": "管理员列表"
+    },
+    "scope_private": {
+        "type": "bool",
+        "default": true,
+        "description": "启用私聊"
+    },
+    "scope_group": {
+        "type": "bool",
+        "default": false,
+        "description": "启用群聊"
+    },
+    "doc_name": {
+        "type": "string",
+        "default": "用户协议",
+        "description": "文档名称"
+    },
+    "doc_version": {
+        "type": "string",
+        "default": "v1.0",
+        "description": "文档版本"
+    },
+    "doc_updated": {
+        "type": "string",
+        "default": "2026-04-09",
+        "description": "更新日期"
+    },
+    "doc_contact": {
+        "type": "string",
+        "default": "QQ群 000000000",
+        "description": "联系方式"
+    },
+    "trigger_keywords": {
+        "type": "list",
+        "items": {"type": "string"},
+        "default": ["协议", "规则", "条例"],
+        "description": "触发关键词"
+    },
+    "agree_keywords": {
+        "type": "list",
+        "items": {"type": "string"},
+        "default": ["同意", "agree", "YES", "是", "接受"],
+        "description": "同意关键词"
+    },
+    "refuse_keywords": {
+        "type": "list",
+        "items": {"type": "string"},
+        "default": ["不同意", "disagree", "NO", "否", "拒绝"],
+        "description": "拒绝关键词"
+    },
+    "cooldown_seconds": {
+        "type": "int",
+        "default": 30,
+        "description": "冷却时间（秒）"
+    },
+    "delivery_text": {
+        "type": "bool",
+        "default": true,
+        "description": "发送文字协议"
+    },
+    "reply_agree": {
+        "type": "string",
+        "default": "✅ 已记录你的同意。现在可以正常使用本机器人。",
+        "description": "同意后回复"
+    },
+    "reply_refuse": {
+        "type": "string",
+        "default": "❌ 已记录你的拒绝。本机器人将无法为你服务。",
+        "description": "拒绝后回复"
+    },
+    "reply_waiting": {
+        "type": "string",
+        "default": "📝 请回复「同意」或「不同意」接受{name}。",
+        "description": "等待时回复"
+    },
+    "doc_sections": {
+        "type": "list",
+        "items": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "content": {"type": "string"}
+            }
         },
-        "agree_word": {
-            "type": "string",
-            "description": "同意词",
-            "default": "同意"
-        },
-        "disagree_word": {
-            "type": "string",
-            "description": "拒绝词",
-            "default": "不同意"
-        },
-        "agreement_content": {
-            "type": "string",
-            "description": "协议内容（支持多行文本）",
-            "default": "欢迎使用本服务。\n\n请仔细阅读以下协议：\n1. 遵守相关规定\n2. 禁止滥用\n\n回复「同意」即表示接受。",
-            "format": "textarea"
-        },
-        "agree_reply": {
-            "type": "string",
-            "description": "同意后的回复",
-            "default": "您已同意协议，感谢您的配合！"
-        },
-        "disagree_reply": {
-            "type": "string",
-            "description": "拒绝后的回复（留空则不回复）",
-            "default": ""
-        },
-        "already_agreed_reply": {
-            "type": "string",
-            "description": "已经同意过的回复",
-            "default": "您已经同意过协议了，无需重复签订。"
-        }
+        "default": [],
+        "description": "文档章节"
+    },
+    "allow_undo": {
+        "type": "bool",
+        "default": true,
+        "description": "允许反悔"
+    },
+    "max_undo": {
+        "type": "int",
+        "default": 3,
+        "description": "最大反悔次数"
+    },
+    "undo_cooldown": {
+        "type": "int",
+        "default": 86400,
+        "description": "反悔冷却时间（秒）"
     }
 }
