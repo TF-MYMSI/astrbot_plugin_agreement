@@ -1,15 +1,15 @@
 {
     "admins": {
-        "type": "array",
+        "type": "list",
         "items": {"type": "string"},
         "default": []
     },
     "scope_private": {
-        "type": "boolean",
+        "type": "bool",
         "default": true
     },
     "scope_group": {
-        "type": "boolean",
+        "type": "bool",
         "default": false
     },
     "doc_name": {
@@ -29,26 +29,26 @@
         "default": "QQ群 000000000"
     },
     "trigger_keywords": {
-        "type": "array",
+        "type": "list",
         "items": {"type": "string"},
         "default": ["协议", "规则", "条例"]
     },
     "agree_keywords": {
-        "type": "array",
+        "type": "list",
         "items": {"type": "string"},
         "default": ["同意", "agree", "YES", "是", "接受"]
     },
     "refuse_keywords": {
-        "type": "array",
+        "type": "list",
         "items": {"type": "string"},
         "default": ["不同意", "disagree", "NO", "否", "拒绝"]
     },
     "cooldown_seconds": {
-        "type": "integer",
+        "type": "int",
         "default": 30
     },
     "delivery_text": {
-        "type": "boolean",
+        "type": "bool",
         "default": true
     },
     "reply_agree": {
@@ -64,7 +64,7 @@
         "default": "📝 请回复「同意」或「不同意」接受{name}。"
     },
     "doc_sections": {
-        "type": "array",
+        "type": "list",
         "items": {
             "type": "object",
             "properties": {
@@ -75,15 +75,15 @@
         "default": []
     },
     "allow_undo": {
-        "type": "boolean",
+        "type": "bool",
         "default": true
     },
     "max_undo": {
-        "type": "integer",
+        "type": "int",
         "default": 3
     },
     "undo_cooldown": {
-        "type": "integer",
+        "type": "int",
         "default": 86400
     }
 }
