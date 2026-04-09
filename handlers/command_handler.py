@@ -4,7 +4,8 @@ import time
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
-from core import (
+# 修改这里：使用 .. 表示上一级目录
+from ..core import (
     PluginConfig, AgreementState, AgreementStorage,
     is_admin, extract_user_id, extract_group_id, is_private_chat
 )
@@ -49,7 +50,6 @@ class CommandHandler:
         user_id = extract_user_id(event)
         group_id = extract_group_id(event)
 
-        # 不检查拒绝状态，让所有用户都能查看
         status = await self.storage.get_state(user_id, group_id)
 
         status_map = {
