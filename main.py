@@ -1,76 +1,108 @@
-import json
-from astrbot.api.event import AstrMessageEvent
+cd /AstrBot/data/plugins/astrbot_plugin_agreement
+
+cat > main.py << 'EOF'
+"""文档签订插件主入口"""
+
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api import logger
+from astrbot.api import logger, AstrBotConfig
 
-from .handlers.message_handler import MessageHandler
+from .core import PluginConfig, AgreementStorage, AgreementState, is_admin, extract_user_id, extract_group_id
+from .handlers import MessageHandler, CommandHandler
 
-@register("astrbot_plugin_agreement", "TF-MYMSI", "文档签订插件", "1.0.0")
+
+@register(
+    "astrbot_plugin_agreement",
+    "YourName",
+    "文档签订插件",
+    "1.0.0"
+)
 class AgreementPlugin(Star):
-    def __init__(self, context: Context, config: dict = None):
+    """文档签订插件主类"""
+
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-        
-        # 先规范化 config 参数
-        normalized_config = self._normalize_config(config)
-        # 如果 config 是字典且包含 'config' 键，则取其值；否则直接用
-        if isinstance(normalized_config, dict) and 'config' in normalized_config:
-            self.config = self._normalize_config(normalized_config.get('config', {}))
-        else:
-            self.config = normalized_config
-        
-        self.message_handler = MessageHandler(self)
-        self.register_commands()
-    
-    def _normalize_config(self, config):
-        """将配置统一转换为字典格式"""
-        if config is None:
-            return {}
-        if isinstance(config, str):
-            try:
-                return json.loads(config)
-            except json.JSONDecodeError:
-                logger.error(f"解析配置JSON失败: {config}")
-                return {}
-        return config if isinstance(config, dict) else {}
-    
-    def reload_config(self, config: dict = None):
-        """重载配置"""
-        normalized_config = self._normalize_config(config)
-        if isinstance(normalized_config, dict) and 'config' in normalized_config:
-            self.config = self._normalize_config(normalized_config.get('config', {}))
-        else:
-            self.config = normalized_config
-        
-        if hasattr(self.message_handler, '_ensure_config_dict'):
-            self.message_handler._ensure_config_dict()
-        logger.info("文档签订插件配置已重载")
-    
-    def register_commands(self):
-        """注册命令"""
-        @self.context.register_command("doc_status", "查看协议签订状态")
-        async def doc_status(event: AstrMessageEvent):
-            async for result in self.message_handler.get_status(event):
-                yield result
-        
-        @self.context.register_command("doc_undo", "反悔重新签订协议")
-        async def doc_undo(event: AstrMessageEvent):
-            async for result in self.message_handler.undo(event):
-                yield result
-        
-        @self.context.register_command("doc_help", "查看帮助")
-        async def doc_help(event: AstrMessageEvent):
-            help_text = """文档签订插件帮助：
-/doc_status - 查看个人签订状态
-/doc_undo - 反悔重新签订协议
-/doc_help - 显示本帮助
-触发词可自定义，默认为 /agreement"""
-            yield event.reply(Plain(help_text))
-    
+        self.config = PluginConfig(config)
+        self.storage = AgreementStorage(self)
+        self.bot_qq = str(context.get_bot_id()) if hasattr(context, 'get_bot_id') else ""
+        self.message_handler = MessageHandler(self.config, self.storage, self.bot_qq)
+        self.command_handler = CommandHandler(self.config, self.storage)
+        self._log_config()
+
+    def _log_config(self) -> None:
+        logger.info(f"文档插件已加载 | 私聊: {self.config.scope_private} | 群聊: {self.config.scope_group}")
+        logger.info(f"文档名称: {self.config.doc_name} | 反悔功能: {'启用' if self.config.allow_undo else '禁用'}")
+
+    async def _is_rejected(self, event: AstrMessageEvent) -> bool:
+        user_id = extract_user_id(event)
+        group_id = extract_group_id(event)
+
+        if is_admin(user_id, self.config.admins):
+            return False
+
+        status = await self.storage.get_state(user_id, group_id)
+        return status == AgreementState.REFUSED
+
+    @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
-        """处理消息"""
-        async for result in self.message_handler.on_message(event):
-            yield result
-    
+        msg = event.message_str
+
+        try:
+            if event.is_command():
+                return
+        except AttributeError:
+            if msg.startswith("/") or msg.startswith("#"):
+                return
+
+        if await self._is_rejected(event):
+            event.stop_event()
+            return
+
+        async for _ in self.message_handler.handle(event):
+            pass
+
+    @filter.command("doc_stats")
+    async def cmd_stats(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_stats(event):
+            pass
+
+    @filter.command("doc_status")
+    async def cmd_status(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_status(event):
+            pass
+
+    @filter.command("doc_undo")
+    async def cmd_undo(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_undo(event):
+            pass
+
+    @filter.command("doc_help")
+    async def cmd_help(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_help(event):
+            pass
+
+    @filter.command("doc_list")
+    async def cmd_list(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_list(event):
+            pass
+
+    @filter.command("doc_reset")
+    async def cmd_reset(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_reset(event):
+            pass
+
+    @filter.command("doc_reset_user")
+    async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
+        async for _ in self.command_handler.cmd_reset_user(event, user_id):
+            pass
+
+    @filter.command("doc_reload")
+    async def cmd_reload(self, event: AstrMessageEvent):
+        async for _ in self.command_handler.cmd_reload(event):
+            pass
+
     async def terminate(self):
-        """插件卸载时的清理"""
-        pass
+        logger.info("文档签订插件已终止")
+EOF
+
+echo "main.py 已修复"
