@@ -1,10 +1,3 @@
-cd /AstrBot/data/plugins/astrbot_plugin_agreement
-
-# 删除错误的 main.py
-rm -f main.py
-
-# 重新写入正确的代码
-cat > main.py << 'MAINEOF'
 """文档签订插件主入口"""
 
 from astrbot.api.event import filter, AstrMessageEvent
@@ -36,6 +29,8 @@ class AgreementPlugin(Star):
     def _log_config(self) -> None:
         logger.info(f"文档插件已加载 | 私聊: {self.config.scope_private} | 群聊: {self.config.scope_group}")
         logger.info(f"文档名称: {self.config.doc_name} | 反悔功能: {'启用' if self.config.allow_undo else '禁用'}")
+        logger.info(f"同意关键词: {self.config.agree_keywords}")
+        logger.info(f"拒绝关键词: {self.config.refuse_keywords}")
 
     async def _is_rejected(self, event: AstrMessageEvent) -> bool:
         user_id = extract_user_id(event)
@@ -47,10 +42,13 @@ class AgreementPlugin(Star):
         status = await self.storage.get_state(user_id, group_id)
         return status == AgreementState.REFUSED
 
+    # ==================== 消息处理 ====================
+
     @filter.regex(r".*")
     async def on_message(self, event: AstrMessageEvent):
         msg = event.message_str
 
+        # 第一步：优先处理命令（不受拒绝状态限制）
         try:
             if event.is_command():
                 return
@@ -58,12 +56,17 @@ class AgreementPlugin(Star):
             if msg.startswith("/") or msg.startswith("#"):
                 return
 
+        # 第二步：非命令消息检查拒绝状态
         if await self._is_rejected(event):
             event.stop_event()
             return
 
+        # 第三步：处理普通消息（异步生成器需要迭代）
         async for _ in self.message_handler.handle(event):
             pass
+
+    # ==================== 命令处理 ====================
+    # 注意：所有命令函数都需要迭代异步生成器，而不是直接 await
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
@@ -107,7 +110,3 @@ class AgreementPlugin(Star):
 
     async def terminate(self):
         logger.info("文档签订插件已终止")
-MAINEOF
-
-# 验证文件是否正确
-head -5 main.py
