@@ -53,25 +53,25 @@ class MessageHandler:
         
         # ========== 状态: WAITING (等待确认) ==========
         if status == AgreementState.WAITING:
-            # 检查是否同意
-            if match_keyword(msg, self.config.agree_keywords):
-                logger.info(f"用户 {user_id} 同意文档")
-                await self.storage.set_state(user_id, AgreementState.AGREED, group_id)
-                await self.storage.set_user_data(user_id, "time", time.time(), group_id)
-                await self.storage.update_stat("agreed", 1, group_id)
-                reply = self.config.format_reply(self.config.reply_agree)
-                if reply:
-                    yield event.plain_result(reply)
-                event.stop_event()
-                return
-            
-            # 检查是否拒绝
+            # 先检查拒绝（让拒绝优先处理）
             if match_keyword(msg, self.config.refuse_keywords):
                 logger.info(f"用户 {user_id} 拒绝文档")
                 await self.storage.set_state(user_id, AgreementState.REFUSED, group_id)
                 await self.storage.set_user_data(user_id, "time", time.time(), group_id)
                 await self.storage.update_stat("refused", 1, group_id)
                 reply = self.config.format_reply(self.config.reply_refuse)
+                if reply:
+                    yield event.plain_result(reply)
+                event.stop_event()
+                return
+            
+            # 再检查同意
+            if match_keyword(msg, self.config.agree_keywords):
+                logger.info(f"用户 {user_id} 同意文档")
+                await self.storage.set_state(user_id, AgreementState.AGREED, group_id)
+                await self.storage.set_user_data(user_id, "time", time.time(), group_id)
+                await self.storage.update_stat("agreed", 1, group_id)
+                reply = self.config.format_reply(self.config.reply_agree)
                 if reply:
                     yield event.plain_result(reply)
                 event.stop_event()
