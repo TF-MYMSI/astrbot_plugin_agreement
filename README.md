@@ -83,4 +83,16 @@ WebUI → 插件管理 → 文档签订插件 → 插件配置
 | `reply_refuse` | 拒绝后的回复内容 |
 | `reply_waiting` | 等待确认时的回复内容 |
 | `doc_sections` | 文档章节内容 |
-| `allow
+| `allow_undo` | 是否允许用户反悔 |
+| `max_undo` | 最大反悔次数 |
+| `undo_cooldown` | 反悔冷却时间（秒） |
+
+### 安装方法
+
+将 `astrbot_plugin_agreement` 文件夹放入 `/root/data/plugins/`，重载插件后启用。
+
+### 注意事项
+
+- 用户拒绝后，机器人将**完全静默**，但 `/doc_status` 和 `/doc_undo` 命令仍可使用
+- 管理员不受上述限制，可正常使用所有命令
+- 只有管理员可以通过 `/doc_reset_user` 命令强制解除用户的拒绝状态
