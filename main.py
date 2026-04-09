@@ -1,6 +1,10 @@
 cd /AstrBot/data/plugins/astrbot_plugin_agreement
 
-cat > main.py << 'EOF'
+# 删除错误的 main.py
+rm -f main.py
+
+# 重新写入正确的代码
+cat > main.py << 'MAINEOF'
 """文档签订插件主入口"""
 
 from astrbot.api.event import filter, AstrMessageEvent
@@ -103,6 +107,7 @@ class AgreementPlugin(Star):
 
     async def terminate(self):
         logger.info("文档签订插件已终止")
-EOF
+MAINEOF
 
-echo "main.py 已修复"
+# 验证文件是否正确
+head -5 main.py
