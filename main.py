@@ -4,8 +4,8 @@ from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger, AstrBotConfig
 
-from core import PluginConfig, AgreementStorage, AgreementState, is_admin, extract_user_id, extract_group_id
-from handlers import MessageHandler, CommandHandler
+from .core import PluginConfig, AgreementStorage, AgreementState, is_admin, extract_user_id, extract_group_id
+from .handlers import MessageHandler, CommandHandler
 
 
 @register(
