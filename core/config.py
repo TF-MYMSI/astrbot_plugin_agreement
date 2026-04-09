@@ -1,6 +1,5 @@
 """配置管理"""
 
-import re
 from typing import List, Dict, Any
 
 
@@ -13,12 +12,12 @@ class PluginConfig:
         
         # 作用范围
         self.scope_private = config_dict.get('启用私聊', True)
-        self.scope_group = config_dict.get('启用群聊', False)
+        self.scope_group = config_dict.get('启用群聊', True)
         
         # 文档配置
         self.doc_name = config_dict.get('文档名称', '用户协议')
         self.doc_version = config_dict.get('文档版本', 'v1.0')
-        self.doc_updated = config_dict.get('更新日期', '2026-04-09')
+        self.doc_updated = config_dict.get('更新日期', '2026-04-10')
         self.contact = config_dict.get('联系方式', 'QQ群 000000000')
         
         # 关键词配置
@@ -26,7 +25,7 @@ class PluginConfig:
         self.agree_keywords = config_dict.get('同意关键词', ['同意', 'agree', 'YES', '是', '接受'])
         self.refuse_keywords = config_dict.get('拒绝关键词', ['不同意', 'disagree', 'NO', '否', '拒绝'])
         
-        # 冷却配置
+        # 冷却配置（秒）
         self.cooldown_seconds = config_dict.get('冷却时间', 30)
         
         # 发送配置
@@ -37,37 +36,56 @@ class PluginConfig:
         self.reply_refuse = config_dict.get('拒绝后回复', '❌ 已记录你的拒绝。本机器人将无法为你服务。')
         self.reply_waiting = config_dict.get('等待时回复', '📝 请回复「同意」或「不同意」接受{name}。')
         
-        # 文档章节
-        self.doc_sections = config_dict.get('文档章节', [])
+        # 文档章节（确保是列表）
+        doc_sections_raw = config_dict.get('文档章节', [])
+        self.doc_sections = doc_sections_raw if isinstance(doc_sections_raw, list) else []
         
         # 反悔机制
         self.allow_undo = config_dict.get('允许反悔', True)
         self.max_undo = config_dict.get('最大反悔次数', 3)
         self.undo_cooldown = config_dict.get('反悔冷却时间', 86400)
         
-        # ========== 机器人QQ（用于检测@） ==========
+        # 机器人QQ（用于检测@）
         self.bot_qq = config_dict.get('bot_qq', '')
     
     def build_document(self) -> str:
         """构建协议文档"""
-        if self.doc_sections:
-            # 使用章节构建文档
+        sections = self.doc_sections if isinstance(self.doc_sections, list) else []
+        
+        if sections:
             sections_text = []
-            for section in self.doc_sections:
-                title = section.get('标题', '')
-                content = section.get('内容', '')
-                if title and content:
-                    sections_text.append(f"【{title}】\n{content}")
-                elif content:
-                    sections_text.append(content)
+            for section in sections:
+                if isinstance(section, dict):
+                    title = section.get('标题', '')
+                    content = section.get('内容', '')
+                    if title and content:
+                        sections_text.append(f"【{title}】\n{content}")
+                    elif content:
+                        sections_text.append(content)
+                elif isinstance(section, str):
+                    sections_text.append(section)
             
-            doc = f"【{self.doc_name}】{self.doc_version}\n\n"
-            doc += "\n\n".join(sections_text)
-            doc += f"\n\n更新日期：{self.doc_updated}\n联系方式：{self.contact}"
-            return doc
-        else:
-            # 默认文档
-            return f"【{self.doc_name}】{self.doc_version}\n\n请仔细阅读以下协议内容。\n\n更新日期：{self.doc_updated}\n联系方式：{self.contact}"
+            if sections_text:
+                doc = f"【{self.doc_name}】{self.doc_version}\n\n"
+                doc += "\n\n".join(sections_text)
+                doc += f"\n\n━━━━━━━━━━━━━━━━━━━━\n📅 更新日期：{self.doc_updated}\n📞 联系方式：{self.contact}"
+                return doc
+        
+        # 默认文档
+        return f"""【{self.doc_name}】{self.doc_version}
+
+请仔细阅读以下协议内容：
+
+1. 遵守相关法律法规
+2. 禁止滥用机器人功能
+3. 本服务保留最终解释权
+
+━━━━━━━━━━━━━━━━━━━━
+📅 更新日期：{self.doc_updated}
+📞 联系方式：{self.contact}
+
+回复「同意」表示接受协议
+回复「不同意」表示拒绝协议"""
     
     def format_reply(self, reply: str) -> str:
         """格式化回复"""
