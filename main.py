@@ -1,8 +1,7 @@
 import json
-from astrbot.api.event import AstrMessageEvent
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
-from astrbot.core.star.command import command
 
 from .core import PluginConfig, AgreementStorage
 from .handlers import MessageHandler, CommandHandler
@@ -44,45 +43,46 @@ class AgreementPlugin(Star):
             raw_config = {}
         return PluginConfig(raw_config)
     
-    # ========== 使用 @command 装饰器注册命令 ==========
+    # ========== 使用 @filter.command 注册命令 ==========
+    # 注意：命令名不加 /，AstrBot 会自动处理
     
-    @command(command="doc_stats")
+    @filter.command("doc_stats")
     async def doc_stats(self, event: AstrMessageEvent):
         """查看统计"""
         async for result in self.command_handler.cmd_stats(event):
             yield result
     
-    @command(command="doc_status")
+    @filter.command("doc_status")
     async def doc_status(self, event: AstrMessageEvent):
         """查看个人状态"""
         async for result in self.command_handler.cmd_status(event):
             yield result
     
-    @command(command="doc_undo")
+    @filter.command("doc_undo")
     async def doc_undo(self, event: AstrMessageEvent):
         """反悔重签"""
         async for result in self.command_handler.cmd_undo(event):
             yield result
     
-    @command(command="doc_help")
+    @filter.command("doc_help")
     async def doc_help(self, event: AstrMessageEvent):
         """帮助"""
         async for result in self.command_handler.cmd_help(event):
             yield result
     
-    @command(command="doc_list")
+    @filter.command("doc_list")
     async def doc_list(self, event: AstrMessageEvent):
         """用户列表（管理员）"""
         async for result in self.command_handler.cmd_list(event):
             yield result
     
-    @command(command="doc_reset")
+    @filter.command("doc_reset")
     async def doc_reset(self, event: AstrMessageEvent):
         """重置统计（管理员）"""
         async for result in self.command_handler.cmd_reset(event):
             yield result
     
-    @command(command="doc_reset_user")
+    @filter.command("doc_reset_user")
     async def doc_reset_user(self, event: AstrMessageEvent):
         """重置指定用户（管理员）"""
         # 从消息中提取参数
@@ -92,18 +92,19 @@ class AgreementPlugin(Star):
         async for result in self.command_handler.cmd_reset_user(event, target):
             yield result
     
-    @command(command="doc_reload")
+    @filter.command("doc_reload")
     async def doc_reload(self, event: AstrMessageEvent):
         """重载配置（管理员）"""
         async for result in self.command_handler.cmd_reload(event):
             yield result
     
     # ========== 普通消息处理（协议签订） ==========
+    # 注意：使用 @filter.on_message() 而不是 on_message 方法名
     
-    async def on_message(self, event: AstrMessageEvent):
-        """处理非命令的普通消息"""
+    @filter.on_message()
+    async def handle_agreement(self, event: AstrMessageEvent):
+        """处理非命令的普通消息（协议签订流程）"""
         try:
-            # 只处理协议签订流程，命令已经被 @command 拦截了
             async for result in self.message_handler.handle(event):
                 if result:
                     yield result
