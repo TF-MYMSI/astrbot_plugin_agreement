@@ -1,5 +1,3 @@
-# main.py 完整版
-
 import json
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
@@ -46,7 +44,6 @@ class AgreementPlugin(Star):
         return PluginConfig(raw_config)
     
     # ========== 命令处理 ==========
-    
     @filter.command("doc_stats")
     async def doc_stats(self, event: AstrMessageEvent):
         async for result in self.command_handler.cmd_stats(event):
@@ -91,13 +88,12 @@ class AgreementPlugin(Star):
             yield result
     
     # ========== 普通消息处理（协议签订） ==========
-    # 使用 @filter.on_message() 监听所有非命令消息
-    
-    @filter.on_message()
+    # 使用正确的装饰器：@filter.event_message_type
+    @filter.event_message_type(filter.EventMessageType.ALL)
     async def handle_agreement(self, event: AstrMessageEvent):
-        """处理协议签订流程"""
+        """处理所有非命令的普通消息（协议签订流程）"""
         try:
-            # 检查是否是命令（避免重复处理）
+            # 跳过命令消息，避免重复处理
             msg = event.message_str.strip()
             if msg.startswith('doc_'):
                 return
