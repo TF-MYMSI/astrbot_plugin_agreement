@@ -91,20 +91,24 @@ class AgreementPlugin(Star):
     @filter.on_message()
     async def handle_agreement(self, event: AstrMessageEvent):
         """处理所有普通消息（协议签订流程）"""
+        logger.info(f"[MAIN] handle_agreement 被调用, 消息={event.message_str}")
         try:
             msg = event.message_str.strip()
             
             # 跳过命令消息
             if msg.startswith('doc_'):
+                logger.info(f"[MAIN] 跳过命令: {msg}")
                 return
             
-            logger.info(f"handle_agreement 收到消息: {msg}")
-            
+            logger.info(f"[MAIN] 调用 message_handler.handle")
             async for result in self.message_handler.handle(event):
                 if result:
+                    logger.info(f"[MAIN] 得到回复")
                     yield result
+                else:
+                    logger.info(f"[MAIN] 无回复")
         except Exception as e:
-            logger.error(f"协议处理出错: {e}")
+            logger.error(f"[MAIN] 协议处理出错: {e}")
             import traceback
             traceback.print_exc()
     
