@@ -61,9 +61,8 @@ class AgreementPlugin(Star):
             event.stop_event()
             return
 
-        # 第三步：处理普通消息（异步生成器需要用 async for 迭代）
-        async for result in self.message_handler.handle(event):
-            # result 已经是 yield event.plain_result(...) 的结果
+        # 第三步：处理普通消息（异步生成器需要迭代）
+        async for _ in self.message_handler.handle(event):
             pass
 
     # ==================== 命令处理 ====================
