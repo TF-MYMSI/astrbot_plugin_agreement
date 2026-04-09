@@ -66,38 +66,47 @@ class AgreementPlugin(Star):
             pass
 
     # ==================== 命令处理 ====================
+    # 注意：所有命令函数都需要迭代异步生成器，而不是直接 await
 
     @filter.command("doc_stats")
     async def cmd_stats(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_stats(event)
+        async for _ in self.command_handler.cmd_stats(event):
+            pass
 
     @filter.command("doc_status")
     async def cmd_status(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_status(event)
+        async for _ in self.command_handler.cmd_status(event):
+            pass
 
     @filter.command("doc_undo")
     async def cmd_undo(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_undo(event)
+        async for _ in self.command_handler.cmd_undo(event):
+            pass
 
     @filter.command("doc_help")
     async def cmd_help(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_help(event)
+        async for _ in self.command_handler.cmd_help(event):
+            pass
 
     @filter.command("doc_list")
     async def cmd_list(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_list(event)
+        async for _ in self.command_handler.cmd_list(event):
+            pass
 
     @filter.command("doc_reset")
     async def cmd_reset(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_reset(event)
+        async for _ in self.command_handler.cmd_reset(event):
+            pass
 
     @filter.command("doc_reset_user")
     async def cmd_reset_user(self, event: AstrMessageEvent, user_id: str = ""):
-        await self.command_handler.cmd_reset_user(event, user_id)
+        async for _ in self.command_handler.cmd_reset_user(event, user_id):
+            pass
 
     @filter.command("doc_reload")
     async def cmd_reload(self, event: AstrMessageEvent):
-        await self.command_handler.cmd_reload(event)
+        async for _ in self.command_handler.cmd_reload(event):
+            pass
 
     async def terminate(self):
         logger.info("文档签订插件已终止")
