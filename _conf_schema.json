@@ -1,89 +1,42 @@
 {
-    "管理员列表": {
-        "type": "list",
-        "items": {"type": "string"},
-        "default": []
-    },
-    "启用私聊": {
-        "type": "bool",
-        "default": true
-    },
-    "启用群聊": {
-        "type": "bool",
-        "default": false
-    },
-    "文档名称": {
-        "type": "string",
-        "default": "用户协议"
-    },
-    "文档版本": {
-        "type": "string",
-        "default": "v1.0"
-    },
-    "更新日期": {
-        "type": "string",
-        "default": "2026-04-09"
-    },
-    "联系方式": {
-        "type": "string",
-        "default": "QQ群 000000000"
-    },
-    "触发关键词": {
-        "type": "list",
-        "items": {"type": "string"},
-        "default": ["协议", "规则", "条例"]
-    },
-    "同意关键词": {
-        "type": "list",
-        "items": {"type": "string"},
-        "default": ["同意", "agree", "YES", "是", "接受"]
-    },
-    "拒绝关键词": {
-        "type": "list",
-        "items": {"type": "string"},
-        "default": ["不同意", "disagree", "NO", "否", "拒绝"]
-    },
-    "冷却时间": {
-        "type": "int",
-        "default": 30
-    },
-    "发送文字协议": {
-        "type": "bool",
-        "default": true
-    },
-    "同意后回复": {
-        "type": "string",
-        "default": "✅ 已记录你的同意。现在可以正常使用本机器人。"
-    },
-    "拒绝后回复": {
-        "type": "string",
-        "default": "❌ 已记录你的拒绝。本机器人将无法为你服务。"
-    },
-    "等待时回复": {
-        "type": "string",
-        "default": "📝 请回复「同意」或「不同意」接受{name}。"
-    },
-    "文档章节": {
-        "type": "list",
-        "items": {
-            "type": "object",
-            "properties": {
-                "标题": {"type": "string"},
-                "内容": {"type": "string"}
-            }
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "trigger_word": {
+            "type": "string",
+            "description": "触发词",
+            "default": "/agreement"
         },
-        "default": []
-    },
-    "允许反悔": {
-        "type": "bool",
-        "default": true
-    },
-    "最大反悔次数": {
-        "type": "int",
-        "default": 3
-    },
-    "反悔冷却时间": {
-        "type": "int",
-        "default": 86400
+        "agree_word": {
+            "type": "string",
+            "description": "同意词",
+            "default": "同意"
+        },
+        "disagree_word": {
+            "type": "string",
+            "description": "拒绝词",
+            "default": "不同意"
+        },
+        "agreement_content": {
+            "type": "string",
+            "description": "协议内容（支持多行文本）",
+            "default": "欢迎使用本服务。\n\n请仔细阅读以下协议：\n1. 遵守相关规定\n2. 禁止滥用\n\n回复「同意」即表示接受。",
+            "format": "textarea"
+        },
+        "agree_reply": {
+            "type": "string",
+            "description": "同意后的回复",
+            "default": "您已同意协议，感谢您的配合！"
+        },
+        "disagree_reply": {
+            "type": "string",
+            "description": "拒绝后的回复（留空则不回复）",
+            "default": ""
+        },
+        "already_agreed_reply": {
+            "type": "string",
+            "description": "已经同意过的回复",
+            "default": "您已经同意过协议了，无需重复签订。"
+        }
     }
 }
