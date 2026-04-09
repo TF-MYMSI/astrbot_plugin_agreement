@@ -1,88 +1,88 @@
 {
-    "admins": {
+    "管理员列表": {
         "type": "list",
         "items": {"type": "string"},
         "default": []
     },
-    "scope_private": {
+    "启用私聊": {
         "type": "bool",
         "default": true
     },
-    "scope_group": {
+    "启用群聊": {
         "type": "bool",
         "default": false
     },
-    "doc_name": {
+    "文档名称": {
         "type": "string",
         "default": "用户协议"
     },
-    "doc_version": {
+    "文档版本": {
         "type": "string",
         "default": "v1.0"
     },
-    "doc_updated": {
+    "更新日期": {
         "type": "string",
         "default": "2026-04-09"
     },
-    "doc_contact": {
+    "联系方式": {
         "type": "string",
         "default": "QQ群 000000000"
     },
-    "trigger_keywords": {
+    "触发关键词": {
         "type": "list",
         "items": {"type": "string"},
         "default": ["协议", "规则", "条例"]
     },
-    "agree_keywords": {
+    "同意关键词": {
         "type": "list",
         "items": {"type": "string"},
         "default": ["同意", "agree", "YES", "是", "接受"]
     },
-    "refuse_keywords": {
+    "拒绝关键词": {
         "type": "list",
         "items": {"type": "string"},
         "default": ["不同意", "disagree", "NO", "否", "拒绝"]
     },
-    "cooldown_seconds": {
+    "冷却时间": {
         "type": "int",
         "default": 30
     },
-    "delivery_text": {
+    "发送文字协议": {
         "type": "bool",
         "default": true
     },
-    "reply_agree": {
+    "同意后回复": {
         "type": "string",
         "default": "✅ 已记录你的同意。现在可以正常使用本机器人。"
     },
-    "reply_refuse": {
+    "拒绝后回复": {
         "type": "string",
         "default": "❌ 已记录你的拒绝。本机器人将无法为你服务。"
     },
-    "reply_waiting": {
+    "等待时回复": {
         "type": "string",
         "default": "📝 请回复「同意」或「不同意」接受{name}。"
     },
-    "doc_sections": {
+    "文档章节": {
         "type": "list",
         "items": {
             "type": "object",
             "properties": {
-                "title": {"type": "string"},
-                "content": {"type": "string"}
+                "标题": {"type": "string"},
+                "内容": {"type": "string"}
             }
         },
         "default": []
     },
-    "allow_undo": {
+    "允许反悔": {
         "type": "bool",
         "default": true
     },
-    "max_undo": {
+    "最大反悔次数": {
         "type": "int",
         "default": 3
     },
-    "undo_cooldown": {
+    "反悔冷却时间": {
         "type": "int",
         "default": 86400
     }
