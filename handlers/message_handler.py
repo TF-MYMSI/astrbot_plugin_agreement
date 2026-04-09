@@ -4,7 +4,8 @@ import time
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
-from .core import (
+# 修改这里：使用 .. 表示上一级目录
+from ..core import (
     PluginConfig, AgreementState, AgreementStorage,
     is_at_me, extract_group_id, extract_user_id,
     match_keyword
