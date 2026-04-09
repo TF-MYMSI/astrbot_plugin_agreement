@@ -11,19 +11,14 @@ class AgreementPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
         
-        # 安全获取配置
         plugin_config = self._get_plugin_config(config)
-        
-        # 初始化存储
         self.storage = AgreementStorage(context)
         
-        # 获取机器人QQ
         try:
             self.bot_qq = context.get_bot().qq
         except:
             self.bot_qq = ''
         
-        # 初始化处理器
         self.message_handler = MessageHandler(plugin_config, self.storage, self.bot_qq)
         self.command_handler = CommandHandler(plugin_config, self.storage)
         
@@ -88,7 +83,8 @@ class AgreementPlugin(Star):
             yield result
     
     # ========== 普通消息处理（协议签订） ==========
-    @filter.on_message()
+    # 使用原有的 event_message_type 监听器
+    @filter.event_message_type(filter.EventMessageType.ALL)
     async def handle_agreement(self, event: AstrMessageEvent):
         """处理所有普通消息（协议签订流程）"""
         logger.info(f"[MAIN] handle_agreement 被调用, 消息={event.message_str}")
@@ -103,7 +99,7 @@ class AgreementPlugin(Star):
             logger.info(f"[MAIN] 调用 message_handler.handle")
             async for result in self.message_handler.handle(event):
                 if result:
-                    logger.info(f"[MAIN] 得到回复")
+                    logger.info(f"[MAIN] 得到回复，yield")
                     yield result
                 else:
                     logger.info(f"[MAIN] 无回复")
