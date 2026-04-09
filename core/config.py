@@ -43,7 +43,6 @@ class PluginConfig:
     @property
     def sections(self) -> List[Dict[str, str]]:
         sections = self._cfg.get("文档章节", [])
-        # 转换中文键名为英文（供内部使用）
         return [
             {"title": s.get("标题", ""), "content": s.get("内容", "")}
             for s in sections
