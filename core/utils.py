@@ -13,12 +13,20 @@ def contains_keyword(text: str, keywords: List[str]) -> bool:
 
 
 def match_keyword(text: str, keywords: List[str]) -> bool:
-    text_lower = text.lower()
-    for kw in keywords:
-        if kw in text:
+    """精确匹配关键词（解决「不同意」被「同意」误判的问题）"""
+    if not keywords:
+        return False
+    
+    # 精确匹配：整个消息完全等于关键词
+    if text in keywords:
+        return True
+    
+    # 可选：按标点分割后匹配（支持「同意。好的」这种情况）
+    import re
+    for seg in re.split(r'[，,。！？；;:：\s]+', text):
+        if seg in keywords:
             return True
-        if kw.lower() in text_lower:
-            return True
+    
     return False
 
 
