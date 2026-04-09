@@ -4,7 +4,9 @@
         "admins": {
             "type": "array",
             "description": "管理员QQ号列表",
-            "items": {"type": "string"},
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "scope_private": {
@@ -40,19 +42,25 @@
         "trigger_keywords": {
             "type": "array",
             "description": "触发关键词（发送这些词会收到协议）",
-            "items": {"type": "string"},
+            "items": {
+                "type": "string"
+            },
             "default": ["协议", "规则", "条例", "同意书"]
         },
         "agree_keywords": {
             "type": "array",
             "description": "同意关键词（回复这些词表示同意）",
-            "items": {"type": "string"},
+            "items": {
+                "type": "string"
+            },
             "default": ["同意", "agree", "YES", "是", "接受", "ok"]
         },
         "refuse_keywords": {
             "type": "array",
             "description": "拒绝关键词（回复这些词表示拒绝）",
-            "items": {"type": "string"},
+            "items": {
+                "type": "string"
+            },
             "default": ["不同意", "disagree", "NO", "否", "拒绝", "cancel"]
         },
         "cooldown_seconds": {
@@ -86,8 +94,12 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "title": {"type": "string"},
-                    "content": {"type": "string"}
+                    "title": {
+                        "type": "string"
+                    },
+                    "content": {
+                        "type": "string"
+                    }
                 }
             },
             "default": []
