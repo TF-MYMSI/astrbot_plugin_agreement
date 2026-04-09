@@ -4,7 +4,7 @@ import time
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
-from core import (
+from .core import (
     PluginConfig, AgreementState, AgreementStorage,
     is_at_me, extract_group_id, extract_user_id,
     match_keyword
@@ -19,7 +19,8 @@ class MessageHandler:
         self.storage = storage
         self.bot_qq = bot_qq
 
-    async def handle(self, event: AstrMessageEvent) -> bool:
+    async def handle(self, event: AstrMessageEvent):
+        """处理普通消息，使用 yield 返回结果"""
         msg = event.message_str
         group_id = extract_group_id(event)
         user_id = extract_user_id(event)
@@ -28,16 +29,16 @@ class MessageHandler:
         # 群聊检查@
         if is_group:
             if not self.config.scope_group:
-                return False
+                return
             if not is_at_me(event, self.bot_qq):
-                return False
+                return
 
         # 私聊检查
         if not is_group and not self.config.scope_private:
-            return False
+            return
 
         if not self.config.delivery_text:
-            return False
+            return
 
         status = await self.storage.get_state(user_id, group_id)
 
@@ -50,7 +51,7 @@ class MessageHandler:
                 await self.storage.add_to_user_list(user_id, group_id)
                 yield event.plain_result(self.config.build_document())
                 event.stop_event()
-                return True
+                return
 
             # 等待确认：处理同意/不同意
             if status == AgreementState.WAITING:
@@ -76,17 +77,17 @@ class MessageHandler:
                         await self.storage.set_user_data(user_id, "last", time.time(), group_id)
                         yield event.plain_result(self.config.build_document())
                     event.stop_event()
-                return True
+                return
 
             # 已同意：放行
             if status == AgreementState.AGREED:
-                return False
+                return
 
             # 已拒绝：静默
-            return False
+            return
 
         except Exception as e:
             logger.error(f"文档插件处理消息时出错: {e}")
             yield event.plain_result("处理消息时出现错误，请稍后再试。")
             event.stop_event()
-            return True
+            return
