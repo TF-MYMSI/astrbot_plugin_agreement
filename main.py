@@ -1,7 +1,8 @@
 import json
-from astrbot.api.event import AstrMessageEvent, command
+from astrbot.api.event import AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from astrbot.core.star.command import command
 
 from .core import PluginConfig, AgreementStorage
 from .handlers import MessageHandler, CommandHandler
