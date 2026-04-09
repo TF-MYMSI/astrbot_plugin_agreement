@@ -44,7 +44,6 @@ class AgreementPlugin(Star):
         return PluginConfig(raw_config)
     
     # ========== 使用 @filter.command 注册命令 ==========
-    # 注意：命令名不加 /，AstrBot 会自动处理
     
     @filter.command("doc_stats")
     async def doc_stats(self, event: AstrMessageEvent):
@@ -85,7 +84,6 @@ class AgreementPlugin(Star):
     @filter.command("doc_reset_user")
     async def doc_reset_user(self, event: AstrMessageEvent):
         """重置指定用户（管理员）"""
-        # 从消息中提取参数
         msg = event.message_str.strip()
         parts = msg.split()
         target = parts[1] if len(parts) > 1 else ""
@@ -99,11 +97,11 @@ class AgreementPlugin(Star):
             yield result
     
     # ========== 普通消息处理（协议签订） ==========
-    # 注意：使用 @filter.on_message() 而不是 on_message 方法名
+    # 使用 @filter.event_message_type 监听所有消息
     
-    @filter.on_message()
+    @filter.event_message_type(filter.EventMessageType.ALL)
     async def handle_agreement(self, event: AstrMessageEvent):
-        """处理非命令的普通消息（协议签订流程）"""
+        """处理所有非命令的普通消息（协议签订流程）"""
         try:
             async for result in self.message_handler.handle(event):
                 if result:
