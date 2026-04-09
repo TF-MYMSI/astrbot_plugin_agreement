@@ -1,6 +1,5 @@
 import json
 from astrbot.api.event import AstrMessageEvent
-from astrbot.api.platform import AstrMessageEventMessage
 from astrbot.api.message_components import Plain
 
 class MessageHandler:
