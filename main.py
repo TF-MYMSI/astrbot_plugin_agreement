@@ -27,7 +27,7 @@ class AgreementPlugin(Star):
         self.message_handler = MessageHandler(plugin_config, self.storage, self.bot_qq)
         self.command_handler = CommandHandler(plugin_config, self.storage)
         
-        logger.info("文档签订插件已加载")
+        logger.info(f"文档签订插件已加载，bot_qq={self.bot_qq}")
     
     def _get_plugin_config(self, raw_config):
         if raw_config is None:
@@ -88,21 +88,25 @@ class AgreementPlugin(Star):
             yield result
     
     # ========== 普通消息处理（协议签订） ==========
-    # 使用正确的装饰器：@filter.event_message_type
-    @filter.event_message_type(filter.EventMessageType.ALL)
+    @filter.on_message()
     async def handle_agreement(self, event: AstrMessageEvent):
-        """处理所有非命令的普通消息（协议签订流程）"""
+        """处理所有普通消息（协议签订流程）"""
         try:
-            # 跳过命令消息，避免重复处理
             msg = event.message_str.strip()
+            
+            # 跳过命令消息
             if msg.startswith('doc_'):
                 return
+            
+            logger.info(f"handle_agreement 收到消息: {msg}")
             
             async for result in self.message_handler.handle(event):
                 if result:
                     yield result
         except Exception as e:
             logger.error(f"协议处理出错: {e}")
+            import traceback
+            traceback.print_exc()
     
     async def terminate(self):
         logger.info("文档签订插件已卸载")
