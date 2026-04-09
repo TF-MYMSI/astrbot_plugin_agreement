@@ -1,5 +1,5 @@
 import json
-from astrbot.api.event import AstrMessageEvent, AstrBotEvent
+from astrbot.api.event import AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
