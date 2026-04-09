@@ -1,5 +1,5 @@
 import json
-from astrbot.api.event import AstrMessageEvent
+from astrbot.api.event import AstrMessageEvent, command
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
@@ -30,7 +30,6 @@ class AgreementPlugin(Star):
         logger.info("文档签订插件已加载")
     
     def _get_plugin_config(self, raw_config):
-        """将原始配置转换为 PluginConfig 对象"""
         if raw_config is None:
             raw_config = {}
         if isinstance(raw_config, str):
@@ -44,65 +43,71 @@ class AgreementPlugin(Star):
             raw_config = {}
         return PluginConfig(raw_config)
     
+    # ========== 使用 @command 装饰器注册命令 ==========
+    
+    @command(command="doc_stats")
+    async def doc_stats(self, event: AstrMessageEvent):
+        """查看统计"""
+        async for result in self.command_handler.cmd_stats(event):
+            yield result
+    
+    @command(command="doc_status")
+    async def doc_status(self, event: AstrMessageEvent):
+        """查看个人状态"""
+        async for result in self.command_handler.cmd_status(event):
+            yield result
+    
+    @command(command="doc_undo")
+    async def doc_undo(self, event: AstrMessageEvent):
+        """反悔重签"""
+        async for result in self.command_handler.cmd_undo(event):
+            yield result
+    
+    @command(command="doc_help")
+    async def doc_help(self, event: AstrMessageEvent):
+        """帮助"""
+        async for result in self.command_handler.cmd_help(event):
+            yield result
+    
+    @command(command="doc_list")
+    async def doc_list(self, event: AstrMessageEvent):
+        """用户列表（管理员）"""
+        async for result in self.command_handler.cmd_list(event):
+            yield result
+    
+    @command(command="doc_reset")
+    async def doc_reset(self, event: AstrMessageEvent):
+        """重置统计（管理员）"""
+        async for result in self.command_handler.cmd_reset(event):
+            yield result
+    
+    @command(command="doc_reset_user")
+    async def doc_reset_user(self, event: AstrMessageEvent):
+        """重置指定用户（管理员）"""
+        # 从消息中提取参数
+        msg = event.message_str.strip()
+        parts = msg.split()
+        target = parts[1] if len(parts) > 1 else ""
+        async for result in self.command_handler.cmd_reset_user(event, target):
+            yield result
+    
+    @command(command="doc_reload")
+    async def doc_reload(self, event: AstrMessageEvent):
+        """重载配置（管理员）"""
+        async for result in self.command_handler.cmd_reload(event):
+            yield result
+    
+    # ========== 普通消息处理（协议签订） ==========
+    
     async def on_message(self, event: AstrMessageEvent):
-        """统一入口：先判断命令，再处理协议"""
+        """处理非命令的普通消息"""
         try:
-            msg = event.message_str.strip()
-            
-            # ========== 命令路由（优先处理） ==========
-            # 用户命令
-            if msg == '/doc_stats':
-                async for result in self.command_handler.cmd_stats(event):
-                    yield result
-                return
-            
-            if msg == '/doc_status':
-                async for result in self.command_handler.cmd_status(event):
-                    yield result
-                return
-            
-            if msg == '/doc_undo':
-                async for result in self.command_handler.cmd_undo(event):
-                    yield result
-                return
-            
-            if msg == '/doc_help':
-                async for result in self.command_handler.cmd_help(event):
-                    yield result
-                return
-            
-            # 管理员命令
-            if msg == '/doc_list':
-                async for result in self.command_handler.cmd_list(event):
-                    yield result
-                return
-            
-            if msg == '/doc_reset':
-                async for result in self.command_handler.cmd_reset(event):
-                    yield result
-                return
-            
-            if msg == '/doc_reload':
-                async for result in self.command_handler.cmd_reload(event):
-                    yield result
-                return
-            
-            if msg.startswith('/doc_reset_user'):
-                parts = msg.split()
-                target = parts[1] if len(parts) > 1 else ""
-                async for result in self.command_handler.cmd_reset_user(event, target):
-                    yield result
-                return
-            
-            # ========== 不是命令，交给协议处理器 ==========
+            # 只处理协议签订流程，命令已经被 @command 拦截了
             async for result in self.message_handler.handle(event):
                 if result:
                     yield result
-                    
         except Exception as e:
             logger.error(f"消息处理出错: {e}")
-            import traceback
-            traceback.print_exc()
     
     async def terminate(self):
         logger.info("文档签订插件已卸载")
